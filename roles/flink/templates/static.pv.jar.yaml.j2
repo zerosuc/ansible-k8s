@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: static-flink-jar-pvc
+  namespace: flink
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  selector:
+    matchLabels:
+      pv: flink-jar-pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    pv: flink-jar-pv
+  name: static-flink-jar-pv
+spec:
+  accessModes:
+    - ReadWriteMany
+  capacity:
+    storage: 10Gi
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: static-flink-jar-pvc
+    namespace: flink
+  mountOptions:
+    - soft
+{% if enable_nfs_local == "no" %}
+  nfs:
+    path: {{ nfs_db_path_remote }}
+    server: {{ nfs_server_remote }}
+  persistentVolumeReclaimPolicy: Retain
+{% else %}
+  nfs:
+    path: {{ nfs_db_path }}
+    server: {{ nfs_server }}
+  persistentVolumeReclaimPolicy: Retain
+{% endif %}

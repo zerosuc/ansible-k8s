@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+function install_nfs_server() {
+
+    # 安装nfs
+    rpm -ivh /tmp/nfs/*.rpm --force --nodeps
+
+    # 新建目录
+    mkdir -p {{nfs_db_path}}  && chmod 777 -R  {{nfs_db_path}}
+    # 加入
+    echo "{{nfs_db_path}}    *(rw,sync,no_root_squash)" >> /etc/exports
+    # 验证
+    exportfs -arv
+    # 启动nfs
+#    systemctl stop firewalld && systemctl disable firewalld
+    systemctl enable rpcbind  &&  systemctl start rpcbind
+    systemctl enable nfs-server && systemctl start nfs-server
+}
+
+install_nfs_server

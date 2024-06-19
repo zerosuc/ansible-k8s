@@ -1,0 +1,41 @@
+---
+apiVersion: apps.sealos.io/v1beta1
+kind: Cluster
+metadata:
+  name: default
+spec:
+  env:
+    - criData={{data_dir}}/k8s/docker
+  hosts:
+    - ips:
+    {% for master in groups['master'] %}
+  - {{ master }}:{{ ansible_ssh_port }}
+    {% endfor %}
+  roles:
+      - master
+      - amd64
+    - ips:
+    {% for node in groups['node'] %}
+  - {{ node }}:{{ ansible_ssh_port }}
+    {% endfor %}
+  roles:
+      - node
+      - amd64
+  image:
+    - labring/kubernetes-docker:v1.21.8
+    - labring/helm:v3.10.0
+  ssh:
+    passwd: {{ ansible_ssh_pass }}
+    pk: /root/.ssh/id_rsa
+    port: {{ ansible_ssh_port }}
+status: {}
+---
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+etcd:
+  local:
+    dataDir: "{{data_dir}}/k8s/etcd"
+networking:
+  podSubnet: {{ podcidr }}
+  serviceSubnet: {{ svccidr }}
+---

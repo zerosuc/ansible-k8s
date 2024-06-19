@@ -1,0 +1,36 @@
+
+- name: Check if unzip is installed
+  command: "which unzip"
+  register: unzip_check
+  ignore_errors: true
+  when:
+    - ansible_distribution == "Ubuntu"
+
+- name: Fail if unzip is not installed
+  fail:
+    msg: "unzip is not installed on the target host. Please install it and run the playbook again."
+  when:
+    - ansible_distribution == "Ubuntu"
+    - unzip_check.rc != 0
+
+- name: "Unarchive categraf.{{ansible_architecture}}.zip"
+  unarchive:
+    src: "categraf.{{ansible_architecture}}.zip"
+    dest: "/opt"
+
+- name: replace config
+  template:
+    src: config.toml.j2
+    dest: "/opt/categraf/conf/config.toml"
+    mode: 0644
+
+- name: cp categraf.service
+  copy:
+    src: "categraf.service"
+    dest: "/etc/systemd/system"
+
+- name: Start categraf service
+  systemd:
+    name: categraf
+    state: started
+    enabled: yes

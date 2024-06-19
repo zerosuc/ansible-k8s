@@ -1,0 +1,15 @@
+---
+# defaults file for k8s
+
+gpu_packages:
+  - package: "libnvidia-container1-1.4.0-1.x86_64"
+  - package: "libnvidia-container-tools-1.4.0-1.x86_64"
+  - package: "nvidia-container-runtime-3.5.0-1.x86_64"
+  - package: "nvidia-container-toolkit-1.5.1-2.x86_64"
+
+
+arm_gpu_packages:
+  - package: "libnvidia-container1-1.4.0-1.x86_64"
+  - package: "libnvidia-container-tools-1.4.0-1.x86_64"
+  - package: "nvidia-container-runtime-3.5.0-1.x86_64"
+  - package: "nvidia-container-toolkit-1.5.1-2.x86_64"

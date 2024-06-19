@@ -1,0 +1,44 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-prometheus
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-pushgateway
+  namespace: kube-prometheus
+spec:
+  selector:
+    name: prometheus-pushgateway
+  type: NodePort
+  ports:
+    - port: 9091
+      targetPort: 9091
+      nodePort: 32000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-pushgateway
+  namespace: kube-prometheus
+  labels:
+    name: prometheus-pushgateway
+spec:
+  selector:
+    matchLabels:
+      name: prometheus-pushgateway
+  template:
+    metadata:
+      labels:
+        name: prometheus-pushgateway
+    spec:
+      nodeSelector:
+        pushgw: "true"
+      hostNetwork: true
+      containers:
+        - name: pushgateway
+          image: prom/pushgateway-{{ansible_architecture}}:v1.6.0
+          ports:
+            - containerPort: 9091

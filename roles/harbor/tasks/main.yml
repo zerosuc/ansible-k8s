@@ -1,0 +1,77 @@
+---
+- name: create harbor dir
+  file:
+    path: "{{ harbor_home }}"
+    state: directory
+    recurse: yes
+
+- name: unarchive harbor files
+  unarchive:
+    src: "harbor-offline-installer-v2.4.2.tgz"
+    dest:  "{{harbor_home}}"
+  when: ansible_architecture == "x86_64"
+
+- name: cp harbor docker  images
+  copy: "src=goharbor-all-v2.3.0.tar.gz  dest=/home"
+  when: ansible_architecture == "aarch64"
+
+- name: load harbor docker images
+  command: "docker load -i /home/goharbor-all-v2.3.0.tar.gz"
+  when: ansible_architecture == "aarch64"
+
+- name: unarchive harbor files
+  unarchive:
+    src: "harbor.zip"
+    dest:  "{{harbor_home}}"
+  when: ansible_architecture == "aarch64"
+
+
+- name: cp docker-compose file
+  copy:
+    src: "docker-compose-{{ansible_architecture}}"
+    dest: "/usr/bin/docker-compose"
+
+- name: set docker-compose chmod
+  command: "chmod 777 /usr/bin/docker-compose"
+
+- name: replace harbor.yml file
+  template:
+    src: "harbor.yml.j2"
+    dest: "{{harbor_home}}/harbor/harbor.yml"
+
+- name: restart gpu docker conf
+  service:
+    name: docker
+    state: restarted
+  when: inventory_hostname  in groups['master0']
+
+### pause 15 seconds
+- name: wait 15 seconds for k8s
+  pause:
+    seconds: 15
+  when: inventory_hostname  in groups['master0']
+
+# tasks file for harbor
+- name: Setup Harbor (Docker registry) with support for Helm chart repositories
+  command: "./install.sh --with-chartmuseum"
+  args:
+    chdir: "{{ harbor_home }}/harbor"
+  register: harbor_prepare
+
+
+- name: Check Harbor installation status
+  shell: "docker-compose ps"
+  args:
+    chdir: "{{ harbor_home }}/harbor"
+  register: compose_ps
+
+- name: List of active Harbor containers
+  debug: msg="{{ compose_ps.stdout }}"
+
+- name: Emit Harbor URL
+  command: echo "Harbor can be accessed at, http://{{ master0ip }}:{{ harborport }}"
+  register: harbor_url
+
+- name: Harbor URL info
+  debug: msg="{{ harbor_url.stdout }}"
+

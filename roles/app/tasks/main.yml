@@ -1,0 +1,403 @@
+---
+### tasks file for app
+- name: cp master-taint.sh
+  copy:
+    src: "master-taint.sh"
+    dest: "/home/master-taint.sh"
+    mode: 0777
+  when:
+  - inventory_hostname in groups['master0']
+  - enable_all_in_one | bool
+
+- name: master0 can run app pod
+  command: "bash -x /home/master-taint.sh"
+  when:
+  - inventory_hostname in groups['master0']
+  - enable_all_in_one | bool
+
+###  import images tars
+- name: create all tar
+  file:
+    path: "{{ tar_home }}"
+    state: directory
+    recurse: yes
+
+- name: scp base docker  images
+  copy: "src={{ item['package'] }}  dest={{tar_home}}/{{ansible_architecture}}/"
+  with_items: "{{ tar_packages }}"
+  when: ansible_architecture == "x86_64"
+
+- name: load base docker images
+  command: "docker load -i {{tar_home}}/{{ item['package'] }}"
+  with_items: "{{ tar_packages }}"
+  when: ansible_architecture == "x86_64"
+
+- name: scp base docker  images
+  copy: "src={{ item['package'] }}  dest={{tar_home}}/{{ansible_architecture}}/"
+  with_items: "{{ arm_tar_packages }}"
+  when: ansible_architecture == "aarch64"
+
+- name: load base docker images
+  command: "docker load -i {{tar_home}}/{{ item['package'] }}"
+  with_items: "{{ arm_tar_packages }}"
+  when: ansible_architecture == "aarch64"
+
+### pure rancher monitor image pkg
+- name: create monitor tar
+  file:
+    path: "{{ tar_home }}/monitor"
+    state: directory
+    recurse: yes
+
+- name: scp monitor docker  images
+  copy: "src={{ item['package'] }}  dest={{tar_home}}/monitor"
+  with_items: "{{ monitor_tar_packages }}"
+  when: ansible_architecture == "x86_64"
+
+- name: load monitor docker images
+  command: "docker load -i {{tar_home}}/{{ item['package'] }}"
+  with_items: "{{ monitor_tar_packages }}"
+  when: ansible_architecture == "x86_64"
+
+- name: scp monitor docker  images
+  copy: "src=monitor.imgs.tar.gz  dest={{tar_home}}/monitor"
+  when: ansible_architecture == "aarch64"
+
+- name: load monitor docker images
+  command: "docker load -i {{tar_home}}/monitor/monitor.imgs.tar.gz"
+  when: ansible_architecture == "aarch64"
+
+## upload to harbor
+- name: cp zxw upload bin
+  copy: "src=zxw.{{ansible_architecture}}  dest={{tar_home}}/zxw"
+  when: inventory_hostname in groups['master0']
+
+- name: down harbor
+  command: "docker-compose down "
+  args:
+    chdir: "{{ harbor_home }}/harbor"
+  when:
+   - inventory_hostname in groups['master0']
+   - ansible_distribution == "openEuler"
+
+- name: wait 5 seconds
+  pause:
+    seconds: 5
+
+- name: restart harbor
+  command: "docker-compose up -d"
+  args:
+    chdir: "{{ harbor_home }}/harbor"
+  when:
+    - inventory_hostname in groups['master0']
+    - ansible_distribution == "openEuler"
+
+- name: wait 5 seconds
+  pause:
+    seconds: 5
+
+- name: login harbor
+  command: "docker login {{master0ip}}:{{harborport}}  -u admin -p Harbor12345"
+
+
+- name: cp harbor.sh.j2
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "harbor.sh.j2"
+    dest: "/home/harbor.sh"
+
+- name: create prj k8s in harbor
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/harbor.sh"
+
+
+- name: chmod zxw upload bin
+  command: "chmod 777 {{tar_home}}/zxw"
+  when: inventory_hostname in groups['master0']
+
+- name: upload images to harbor
+  command: "{{tar_home}}/zxw push  -r={{master0ip}}:{{harborport}}"
+  when: inventory_hostname in groups['master0']
+  register: upload_result
+
+- name: echo upload_result
+  when: inventory_hostname in groups['master0']
+  debug:
+    msg: "{{upload_result}}"
+
+
+- name: create secret harbor
+  when: inventory_hostname in groups['master0']
+  shell: " kubectl create secret generic harbor \
+    --from-file=.dockerconfigjson=/root/.docker/config.json \
+    --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f -"
+
+- name: create secret 151harbor
+  when: inventory_hostname in groups['master0']
+  shell: " kubectl create secret generic 151harbor \
+    --from-file=.dockerconfigjson=/root/.docker/config.json \
+    --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f - "
+
+- name: label gpu node
+  command: "kubectl label node  {{hostvars[item]['hostname']}}  nvidia.com/gpu.present=true  --overwrite"
+  with_items: "{{ groups['labelgpu'] }}"
+  when: inventory_hostname in groups['master0']
+
+- name: label ingerss node
+  command: "kubectl label node  {{hostvars[item]['hostname']}}  ingress=true  --overwrite"
+  with_items: "{{ groups['ingressnode'] }}"
+  when: inventory_hostname in groups['master0']
+
+##10.生成 ingress
+- name: cp ingress.yaml
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "ingress-nginx.yaml.j2"
+    dest: "/home/ingress-nginx.yaml"
+
+###8.  apply  ingress
+- name: apply ingress
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/ingress-nginx.yaml"
+
+
+##10.生成 ingress
+- name: template storage class
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "local-sc.yaml.j2"
+    dest: "/home/local-sc.yaml"
+
+##8.  apply  local sc
+- name: apply local sc
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/local-sc.yaml"
+
+
+## 14. metrics server
+- name: cp metrics-server.yaml
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "metrics-server.yaml"
+    dest: "/home/metrics-server.yaml"
+
+##8.  apply  local sc
+- name: apply metrics-server.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/metrics-server.yaml"
+
+
+#### flashcat
+- name: create ns flashcat
+  when: inventory_hostname in groups['master0']
+  shell: "kubectl create ns flashcat --dry-run=client -o yaml | kubectl apply -f - "
+
+- name: cp controller-layer-svc.yaml
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "controller-layer-svc.yaml"
+    dest: "/home/controller-layer-svc.yaml"
+
+##8.  apply  controller-layer svc
+- name: apply controller-layer-svc.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/controller-layer-svc.yaml"
+
+## metacontroller
+
+- name: unarchive metacontroller files
+  when: inventory_hostname in groups['master0']
+  unarchive:
+    src: "metacontroller.tar.gz"
+    dest:  "/home"
+
+- name: apply metacontroller yaml
+  when: inventory_hostname in groups['master0']
+  command: " kubectl apply -k  /home/metacontroller/manifests/production/  "
+
+- name: apply per pod per svc yaml
+  when: inventory_hostname in groups['master0']
+  command: " kubectl apply -k  /home/metacontroller/examples/service-per-pod/manifest/  "
+
+
+- name: template prometheus-additional.yaml
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "prometheus-additional.yaml.j2"
+    dest: "/home/prometheus-additional.yaml"
+
+##add flashcat
+- name: create secret  additional-scrape-configs
+  when: inventory_hostname in groups['master0']
+  shell: "kubectl create secret generic additional-scrape-configs --from-file=/home/prometheus-additional.yaml --dry-run=client --output=yaml > /home/additional-scrape-configs.yaml"
+
+- name: create ns cattle-monitoring-system
+  when: inventory_hostname in groups['master0']
+  shell: "kubectl create ns cattle-monitoring-system --dry-run=client -o yaml | kubectl apply -f - "
+
+- name: apply  additional-scrape-configs
+  when: inventory_hostname in groups['master0']
+  shell: " kubectl apply -f /home/additional-scrape-configs.yaml -n cattle-monitoring-system"
+
+- name: unarchive crd-manifest.tgz crd files
+  when: inventory_hostname in groups['master0']
+  unarchive:
+    src: "crd-manifest.tgz"
+    dest:  "/home"
+
+- name: apply rancher crd yaml
+  when: inventory_hostname in groups['master0']
+  shell: " kubectl apply -f /home/charts/crds/"
+
+- name: unarchive rancher-monitoring crd files
+  when: inventory_hostname in groups['master0']
+  unarchive:
+    src: "rancher-monitoring.zip"
+    dest:  "/home"
+
+- name: cp monitor-ns.sh
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "monitor-ns.sh"
+    dest: "/home/monitor-ns.sh"
+    mode: 0777
+
+- name: del if exists ns cattle-dashboards
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/monitor-ns.sh"
+
+- name: apply rancher monitoring yaml
+  when: inventory_hostname in groups['master0']
+  shell: "helm install rancher-monitoring  /home/rancher-monitoring -n cattle-monitoring-system"
+
+
+#- name: cp nfs yaml
+#  when: inventory_hostname in groups['master0']
+#  template:
+#    src: "nfs.yaml.j2"
+#    dest: "/home/nfs.yaml"
+#
+#- name: cp nfs-local yaml
+#  when:
+#    - enable_nfs_local | bool
+#    - inventory_hostname in groups['nfsserver-local']
+#  template:
+#    src: "nfs.local.yaml.j2"
+#    dest: "/home/nfs.local.yaml"
+
+##8.  apply  nfs
+#- name: apply  nfsserver-local nfs
+#  when:
+#    - enable_nfs_local | bool
+#    - inventory_hostname in groups['nfsserver-local']
+#  command: "kubectl apply -f /home/nfs.local.yaml"
+#
+#- name: apply nfs
+#  when:
+#    - not enable_nfs_local | bool
+#  command: "kubectl apply -f /home/nfs.yaml"
+
+## 15. test ingress
+- name: cp test-ingress.yaml
+  when:
+    - inventory_hostname in groups['master0']
+  copy:
+    src: "test-ingress.yaml"
+    dest: "/home/test-ingress.yaml"
+
+### pause 1 min for pod ingress ok
+- name: wait 1 min for some depends on pod is ok
+  pause:
+    minutes: 1
+
+##8.  apply  ingress
+- name: apply test-ingress.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/test-ingress.yaml"
+
+#- name: cp testnfs.yaml
+#  when: inventory_hostname in groups['master0']
+#  copy:
+#    src: "testnfs.yaml"
+#    dest: "/home/testnfs.yaml"
+#
+###8.  apply  testnfs sc
+#- name: apply testnfs.yaml
+#  when:
+#  - inventory_hostname in groups['master0']
+#  command: "kubectl apply -f /home/testnfs.yaml"
+
+###13. gpu yaml
+- name: cp gpu.yaml
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "gpu.yaml"
+    dest: "/home/gpu.yaml"
+
+##8.  apply  gpu 依赖servicemonitor
+- name: apply gpu.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/gpu.yaml"
+
+#- name: cp cm-writer.yaml
+#  when: inventory_hostname in groups['master0']
+#  template:
+#    src: "cm-writer.yaml.j2"
+#    dest: "/home/cm-writer.yaml"
+#
+###8.  apply  cm-writer
+#- name: apply cm-writer.yaml
+#  when: inventory_hostname in groups['master0']
+#  command: "kubectl apply -f /home/cm-writer.yaml  -n flashcat "
+#
+#- name: cp ds-all.yaml
+#  when: inventory_hostname in groups['master0']
+#  copy:
+#    src: "ds-all.yaml"
+#    dest: "/home/ds-all.yaml"
+#
+###8.  apply  ds-all
+#- name: apply ds-all.yaml
+#  when: inventory_hostname in groups['master0']
+#  command: "kubectl apply -f /home/ds-all.yaml  -n flashcat "
+
+- name: template crd.sh
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "updatecrd.sh.j2"
+    dest: "/home/updatecrd.sh"
+
+- name: update crd
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/updatecrd.sh"
+
+- name: template clearlogs.sh
+  template:
+    src: "clearlogs.sh.j2"
+    dest: "/root/clearlogs.sh"
+    mode: 0777
+
+- name:  clear logs
+  cron:
+    name: clear logs
+    minute: "20"
+    job: "/usr/bin/bash /root/clearlogs.sh"
+
+- name: cp ing-realip.sh
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "ing-realip.sh"
+    dest: "/home/ing-realip.sh"
+    mode: 0777
+
+- name: exe ing-realip.sh
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/ing-realip.sh"
+
+- name: Set NodePort for the rancher-monitoring-grafana service
+  when: inventory_hostname in groups['master0']
+  shell: |
+    kubectl patch svc rancher-monitoring-grafana -n cattle-monitoring-system --type='json' -p='[{"op": "replace", "path": "/spec/type", "value":"NodePort"}, {"op": "add", "path": "/spec/ports/0/nodePort", "value":31000}]'
+  register: output
+- debug: var=output.stdout_lines
+  when: inventory_hostname in groups['master0']

@@ -1,0 +1,37 @@
+
+### 1. scp  images
+- name: scp  vpcenter tar.gz
+  copy: "src={{ item }} dest=/home/{{ item }}"
+  with_items:
+    - "vias-vpcenter-{{ansible_architecture}}.tar.gz"
+  when:
+    - inventory_hostname in groups['master0']
+
+- name: load  vpcenter  images
+  command: "docker load -i /home/{{ item }}"
+  with_items:
+    - "vias-vpcenter-{{ansible_architecture}}.tar.gz"
+  when:
+    - inventory_hostname in groups['master0']
+
+
+- name: unarchive vpceter chart files
+  unarchive:
+    src: "vias-vpcenter.zip"
+    dest:  "/home"
+  when:
+    - inventory_hostname in groups['master0']
+
+- name: replace values.yaml to chart dir
+  template:
+    src: "values.yaml.j2"
+    dest: "/home/vias-vpcenter/values.yaml"
+  when:
+    - inventory_hostname in groups['master0']
+
+- name: install vpcenter
+  shell: "helm install vias-vpcenter /home/vias-vpcenter/"
+  when:
+    - inventory_hostname in groups['master0']
+
+

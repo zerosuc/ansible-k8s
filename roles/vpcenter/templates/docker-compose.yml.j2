@@ -1,0 +1,54 @@
+version: "2.2"
+services:
+
+  postgres_vp:
+    image: common/postgres:{{ pg_tag }}
+    container_name: postgres_vp
+    privileged: true
+    restart: always
+    volumes:
+      - ./common/postgres/init-script:/docker-entrypoint-initdb.d
+      - ./data/pg_data:/var/lib/postgresql/data
+    env_file:
+      - ./common/postgres/envfile/postgres.env
+    network_mode: "host"
+    #ports:
+    #  - 5432:5432
+
+  nginx_vp:
+    image: vpcenter/vpcenter-front:{{ vpcenter_front_tag }}
+    container_name: nginx_vp
+    privileged: true
+    restart: always
+    volumes:
+      - ./common/nginx:/etc/nginx:z
+        # - ./data/dist:/dist
+    network_mode: "host"
+    # ports:
+    #   - 18080:18080
+
+  vpcenterapi:
+    image: vpcenter/vpcenter-api:{{ vpcenter_api_tag }}
+    container_name: vpcenterapi
+    privileged: true
+    restart: always
+    volumes:
+      - ./common/vpcenterapi/application.yml:/vpcenterapi/application.yml
+      - ./tools/helm:/usr/local/bin/helm
+      - ./tools/kubectl:/usr/bin/kubectl
+      - ./config:/root/.kube
+      - ./logs:/logs
+      - ./upload:/data
+      - ./key:/key
+    network_mode: "host"
+    #ports:
+    #  - 8081:8081
+
+
+    #volumes:
+    #  nfsv:
+    #    driver: 'local'
+    #    driver_opts:
+    #      type: "nfs"
+    #      o: "addr=10.30.26.60,nolock,soft,rw"
+    #      device: ":/data/bigtoe/upload-videos"

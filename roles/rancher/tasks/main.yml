@@ -1,0 +1,25 @@
+---
+## 1. tasks file for rancher
+- name: scp  rancher tar
+  copy: "src={{ item }} dest=/home/{{ item }}"
+  with_items:
+    - "rancher.v2.6.9-{{ansible_architecture}}.tar.gz"
+
+- name: load  rancher  images
+  command: "docker load -i /home/{{ item }}"
+  with_items:
+    - "rancher.v2.6.9-{{ansible_architecture}}.tar.gz"
+
+- name: template rancher.sh.j2
+  template:
+    src: "rancher.sh.j2"
+    dest: "/home/rancher.sh"
+    mode: "0775"
+
+- name: run rancher server
+  command: "bash -x  /home/rancher.sh"
+  register: rancher_result # register指令把执行结果寄存到自定义变量中
+
+- name: echo rancher_result
+  debug:
+    msg: "{{ rancher_result }}"  # 打印变量

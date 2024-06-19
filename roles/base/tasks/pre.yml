@@ -1,0 +1,45 @@
+### user/pwd/ssh check
+# - name: Wait until SSH is available
+#   wait_for:
+#     host: "{{ ansible_host }}"
+#     port: "{{ansible_port}}"
+#     timeout: 30
+#   delegate_to: localhost
+
+- name: Print OS distribution
+  debug:
+    var: ansible_distribution
+
+- name: create file transfer dir
+  when: inventory_hostname  in groups['k8s']
+  file:
+    path: "{{ work_home }}"
+    state: directory
+    recurse: yes
+
+- name: cp tar-1.32-4.oe1.x86_64.rpm tar self
+  when:
+    - inventory_hostname  in groups['k8s']
+    - ansible_distribution == "openEuler"
+  copy:
+    src: "tar-1.32-4.oe1.x86_64.rpm"
+    dest: "/tmp/tar-1.32-4.oe1.x86_64.rpm"
+
+- name: Install tar self  packages
+  when:
+    - inventory_hostname  in groups['k8s']
+    - ansible_distribution == "openEuler"
+  command: "rpm -ivh /tmp/tar-1.32-4.oe1.x86_64.rpm --force "
+
+- name: unarchive packages to target host openEuler
+  unarchive:
+    src: "dep.openeuler.{{ansible_architecture}}.tar.gz"
+    dest: "{{work_home}}"
+    mode: 0755
+  when:
+    - ansible_distribution == "openEuler"
+
+- name: Install packages on openEuler
+  command: "rpm -ivh {{work_home}}/dep/*.rpm  --force"
+  when:
+    - ansible_distribution == "openEuler"

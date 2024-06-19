@@ -1,0 +1,55 @@
+---
+# tasks file for n9e
+
+- name: create n9e home dir
+  file:
+    path: "{{ n9e_home }}"
+    state: directory
+    recurse: yes
+
+- name: unarchive n9e zip files
+  unarchive:
+    src: "nightingale.tar.gz"
+    dest:  "{{n9e_home}}"
+
+- name: scp n9e docker  images
+  copy: "src={{ item['package'] }}  dest=/home"
+  with_items: "{{ n9e_packages }}"
+  when: ansible_architecture == "x86_64"
+
+- name: load n9e docker images
+  command: "docker load -i /home/{{ item['package'] }}"
+  with_items: "{{ n9e_packages }}"
+  when: ansible_architecture == "x86_64"
+
+- name: cp n9e docker  images
+  copy: "src=nightingale.img.tar.gz  dest=/home"
+  when: ansible_architecture == "aarch64"
+
+- name: load n9e docker images
+  command: "docker load -i /home/nightingale.img.tar.gz"
+  when: ansible_architecture == "aarch64"
+
+- name: cp docker-compose file
+  copy:
+    src: "docker-compose-{{ansible_architecture}}"
+    dest: "/usr/bin/docker-compose"
+
+- name: set docker-compose chmod
+  command: "chmod 777 /usr/bin/docker-compose"
+
+- name: Setup n9e
+  shell: "docker-compose up -d"
+  args:
+    chdir: "{{ n9e_home }}/nightingale/docker"
+  register: harbor_prepare
+
+
+- name: Check n9e installation status
+  shell: "docker-compose ps"
+  args:
+    chdir: "{{ n9e_home }}/nightingale/docker"
+  register: compose_ps
+
+- name: List of active n9e containers
+  debug: msg="{{ compose_ps.stdout }}"

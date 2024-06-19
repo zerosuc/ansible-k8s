@@ -1,0 +1,63 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tomcat
+  namespace: default
+spec:
+  selector:
+    app: tomcat
+    release: canary
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: ajp
+      port: 8009
+      targetPort: 8009
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tomcat-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tomcat
+      release: canary
+  template:
+    metadata:
+      labels:
+        app: tomcat
+        release: canary
+    spec:
+      containers:
+        - name: tomcat
+          image: wanminny/tomcat:7-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: httpd
+              containerPort: 8080
+            - name: ajp
+              containerPort: 8009
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-tomcat
+  namespace: default
+spec:
+  rules:
+    - host: abcd.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: tomcat
+                port:
+                  number: 8080
+            path: /
+            pathType: ImplementationSpecific

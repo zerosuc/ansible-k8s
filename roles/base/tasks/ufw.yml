@@ -1,0 +1,89 @@
+---
+- name: before operator Display ufw status
+  command: ufw status
+  register: list
+  when: inventory_hostname in groups['k8s']
+
+- debug: # noqa name[missing]
+    msg: "{{ list.stdout.split('\n') }}"
+  when: inventory_hostname in groups['k8s']
+
+- name: design protocol [udp/tcp]
+  ufw:
+    rule: allow
+    port: "{{ item.split('/')[0] }}"
+    proto: "{{ item.split('/')[1] }}"
+  loop:
+    - "6443/tcp"
+    - "2379:2381/tcp"
+    - "30000:32767/tcp"
+    - "10250:10259/tcp"
+    - "9443/tcp"
+    - "8443/tcp"
+    - "7443/tcp"
+    - "443/tcp"
+    - "8081/tcp"
+    - "8080/tcp"
+    - "443/tcp"
+    - "80/tcp"
+    - "8472:8475/tcp"
+    - "9090/tcp"
+    - "9091/tcp"
+    - "9100/tcp"
+    - "53/tcp"
+    - "53/udp"
+    - "323/tcp"
+    - "111/tcp"
+    - "111/udp"
+    - "2049/tcp"
+    - "2049/udp"
+    - "20048/tcp"
+    - "20048/udp"
+    - "20049/tcp"
+    - "20049/udp"
+    - "999/tcp"
+    - "5473/tcp"
+    - "179/tcp"
+    - "4789/udp"
+    - "8285/udp"
+    - "123/tcp"
+    - "123/udp"
+    - "19000/tcp"
+    - "17000/tcp"
+    - "20090/tcp"
+    - "10090/tcp"
+    - "3306/tcp"
+    - "18000/tcp"
+    - "8094/tcp"
+    - "8125/tcp"
+    - "6379/tcp"
+    - "18080/tcp"
+    - "8472:8475/udp"
+    - "22/tcp"
+    - "9796/tcp"
+    - "5000/tcp"
+    - "{{ansible_ssh_port}}/tcp"
+  when: inventory_hostname in groups['k8s']
+
+- name: base Enable UFW
+  ufw:
+    state: enabled
+  when: inventory_hostname in groups['k8s']
+
+#- name: Enable masquerade
+#  ufw:
+#    rule: masquerade
+
+- name: Reload UFW
+  ufw:
+    state: reloaded
+  when: inventory_hostname in groups['k8s']
+
+- name: Display ufw status
+  command: ufw status
+  register: list
+  when: inventory_hostname in groups['k8s']
+
+- debug:  # noqa name[missing]
+    msg: "{{ list.stdout.split('\n') }}"
+  when: inventory_hostname in groups['k8s']

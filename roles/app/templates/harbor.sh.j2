@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+HARBOR_URL=http://{{ harborip }}:{{harborport}}
+USERNAME=admin
+PASSWORD=Harbor12345
+PROJECT_NAME=k8s
+
+function create_project() {
+    curl -X POST -H "Content-Type: application/json" -H "Authorization: Basic $(echo -n $USERNAME:$PASSWORD | base64)" \
+    -d '{"project_name": "'"${PROJECT_NAME}"'", "public": true}' \
+    "${HARBOR_URL}/api/v2.0/projects"
+}
+
+create_project

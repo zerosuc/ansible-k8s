@@ -1,0 +1,26 @@
+---
+- name: Include pre.yml
+  include_tasks: pre.yml
+
+## 开启防火墙;
+- name: Include centos firewall.yml
+  include_tasks: firewall.yml
+  when:
+    - enable_firewall | default(false)| bool
+    - ansible_distribution == "CentOS" or ansible_distribution is search("Kylin") or ansible_distribution == "openEuler"
+
+## 开启防火墙;
+- name: Include ubuntu ufw.yml
+  include_tasks: ufw.yml
+  when:
+    - enable_firewall | default(false)| bool
+    - ansible_distribution == "Ubuntu"
+
+- name: Include base.yml
+  include_tasks: base.yml
+
+- name: Include nfs.yml
+  include_tasks: nfs.yml
+
+- name: Include ntp.yml
+  include_tasks: ntp.yaml

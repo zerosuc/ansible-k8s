@@ -1,0 +1,68 @@
+[global]
+# whether print configs
+print_configs = false
+
+# add label(agent_hostname) to series
+# "" -> auto detect hostname
+# "xx" -> use specified string xx
+# "$hostname" -> auto detect hostname
+# "$ip" -> auto detect ip
+# "$hostname-$ip" -> auto detect hostname and ip to replace the vars
+# hostname = "$HOSTNAME"
+
+hostname = "$hostname-$ip"
+
+# will not add label(agent_hostname) if true
+omit_hostname = false
+
+# s | ms
+precision = "ms"
+
+# global collect interval
+interval = 15
+
+[log]
+# 默认的log输出，到标准输出(stdout)
+# 如果指定为文件, 则写入到指定的文件中
+file_name = "stdout"
+
+# options below will not be work when file_name is stdout or stderr
+# 如果是写入文件，最大写入大小，单位是MB
+max_size = 100
+# max_age is the maximum number of days to retain old log files based on the timestamp encoded in their filename.
+# 保留多少天的日志文件
+max_age = 1
+# max_backups is the maximum number of old log files to retain.
+# 保留多少个日志文件
+max_backups = 1
+# local_time determines if the time used for formatting the timestamps in backup files is the computer's local time.
+# 是否使用本地时间
+local_time = true
+# Compress determines if the rotated log files should be compressed using gzip.
+# 是否将老文件压缩（gzip格式)
+compress = false
+
+[global.labels]
+source="categraf"
+# region = "shanghai"
+# env = "localhost"
+
+[writer_opt]
+# default: 2000
+batch = 2000
+# channel(as queue) size
+chan_size = 10000
+
+[[writers]]
+url = "http://{{ n9e_server_ip }}:19000/prometheus/v1/write"
+
+# Basic auth username
+basic_auth_user = ""
+
+# Basic auth password
+basic_auth_pass = ""
+
+# timeout settings, unit: ms
+timeout = 5000
+dial_timeout = 2500
+max_idle_conns_per_host = 100

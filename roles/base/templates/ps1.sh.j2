@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+function setps() {
+
+    if [ -e /root/.bash_profile ]; then
+        if ! grep -qF '033' /root/.bash_profile; then
+            echo 'export PS1="[\[\033[01;31m\]\u\[\033[00m\]@\[\033[01;32m\]\H\[\033[00m\] \[\033[01;33m\]\w\[\033[00m\]]\[\033[01;34m\]$\[\033[00m\]"' | sudo tee -a /root/.bash_profile;
+        fi
+    elif [ -e /root/.profile ]; then
+        if ! grep -qF '033' /root/.profile; then
+            echo 'export PS1="[\[\033[01;31m\]\u\[\033[00m\]@\[\033[01;32m\]\H\[\033[00m\] \[\033[01;33m\]\w\[\033[00m\]]\[\033[01;34m\]$\[\033[00m\]"' | sudo tee -a /root/.profile;
+        fi
+    else
+        echo "Neither .bash_profile nor .profile exists."
+    fi
+
+    if [ -L /opt/app ]; then
+      echo -e 'link exists!\n'
+    else
+        mkdir {{data_dir}}/app  -p
+        cd /opt
+        ln -s {{data_dir}}/app  app
+        echo -e "create link done!"
+    fi
+}
+
+setps
+
+

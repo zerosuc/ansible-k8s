@@ -1,0 +1,27 @@
+kind: Pod
+spec:
+  initContainers:
+    - name: init-chmod-data
+      image: busybox
+      imagePullPolicy: IfNotPresent
+      command: ["sh", "-c", "chmod -R 777 /data/flink/logs"]
+      volumeMounts:
+      - name: flink-log
+        mountPath: /data/flink/logs
+  containers:
+    - name: flink-main-container
+      volumeMounts:
+        - mountPath: /opt/flink/usrlib
+          name: flink-jar
+        - mountPath: /opt/flink/log
+          name: flink-log
+  volumes:
+    - name: flink-jar
+      persistentVolumeClaim:
+        claimName: static-flink-jar-pvc
+    - name: flink-log
+      hostPath:
+        path: /data/flink/logs
+        type: DirectoryOrCreate
+  imagePullSecrets:
+  - name: harbor

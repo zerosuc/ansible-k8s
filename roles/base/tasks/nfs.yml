@@ -1,0 +1,32 @@
+##  这个剧本是针对有的现场没有nfs server就现在本地机器创建一个nfs server
+- name: nfs dir
+  file:
+    path: /tmp/nfs
+    state: directory
+  when:
+    - enable_nfs_local | bool
+    - inventory_hostname in groups['nfsserver-local']
+
+#- name: unarchive nfs files
+#  unarchive:
+#    src: "nfs-server.{{ansible_architecture}}.tar.gz"
+#    dest:  "/tmp/nfs"
+#  when:
+#    - enable_nfs_local | bool
+#    - inventory_hostname in groups['nfsserver-local']
+#    - ansible_distribution == "CentOS"
+
+- name: cp nfs.sh
+  template:
+    src: "nfs.sh.j2"
+    dest: "/home/nfs.sh"
+    mode: 0777
+  when:
+    - enable_nfs_local | bool
+    - inventory_hostname in groups['nfsserver-local']
+
+- name: exe nfs.sh
+  command: "bash -x /home/nfs.sh"
+  when:
+    - enable_nfs_local | bool
+    - inventory_hostname in groups['nfsserver-local']

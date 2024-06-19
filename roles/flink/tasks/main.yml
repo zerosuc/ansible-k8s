@@ -1,0 +1,111 @@
+
+#### fink pre
+- name: cp flink.sh
+  copy:
+    src: "flink.sh"
+    dest: "/home/flink.sh"
+    mode: 0777
+  when: inventory_hostname in groups['master0']
+
+- name: exe flink.sh
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/flink.sh"
+
+###  import images tars
+- name: create flink all tar
+  file:
+    path: "{{ flink_tar_home }}/{{ansible_architecture}}"
+    state: directory
+    recurse: yes
+
+- name: cp {{ansible_architecture}} flink docker  images
+  copy: "src={{ item['package'] }}  dest={{flink_tar_home}}/{{ansible_architecture}}/"
+  with_items: "{{ tar_packages }}"
+
+- name: load  {{ansible_architecture}} flink docker images
+  command: "docker load -i {{flink_tar_home}}/{{ item['package'] }}"
+  with_items: "{{ tar_packages }}"
+
+- name: label pushgw node
+  command: "kubectl label node  {{hostvars[item]['hostname']}}  pushgw=true  --overwrite"
+  with_items: "{{ groups['pushgwnode'] }}"
+  when: inventory_hostname in groups['master0']
+
+- name: cp pushgw.yaml
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "pushgw.yaml"
+    dest: "/home/pushgw.yaml"
+
+- name: apply pushgw
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/pushgw.yaml"
+
+- name: create nfs local jar dir
+  command: "mkdir -p {{nfs_db_path}}"
+  register: flink_result
+  when:
+    - enable_nfs_local | bool
+    - inventory_hostname in groups['nfsserver-local']
+
+- name: cp static.pv.jar.yaml
+  when: inventory_hostname in groups['nfsserver-local']
+  template:
+    src: "static.pv.jar.yaml.j2"
+    dest: "/home/static.pv.jar.yaml"
+
+- name: apply static.pv.jar.yaml
+  when: inventory_hostname in groups['nfsserver-local']
+  command: "kubectl apply -f /home/static.pv.jar.yaml"
+
+- name: cp shell file
+  copy:
+    src: "flink.logs.sh"
+    dest: "/home/flink.logs.sh"
+    mode: "0755"
+
+- name:  clear flink logs
+  cron:
+    name: clear  flink logs
+    minute: "0"
+    hour: "*/12"
+    job: "/usr/bin/bash /home/flink.logs.sh"
+
+- name: cp kubeconfig sh file
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "flink-config.sh"
+    dest: "/home/flink-config.sh"
+    mode: "0755"
+
+- name: gen flink kubeconfig file
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/flink-config.sh"
+  register: flink_result
+
+- name: echo flink_result
+  when: inventory_hostname in groups['master0']
+  debug:
+    msg: "{{flink_result}}"
+
+- name: cp flink-token.sh file
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "flink-token.sh"
+    dest: "/home/flink-token.sh"
+    mode: "0755"
+
+- name: get flink token file
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/flink-token.sh"
+  register: flink_token_result
+
+- name: echo flink_token_result
+  when: inventory_hostname in groups['master0']
+  debug:
+    msg: "{{flink_token_result}}"
+
+# only master can exec kubectl
+- name: mv k8s config
+  when: inventory_hostname in groups['node']
+  command: "rm  -rf  ~/.kube/config"

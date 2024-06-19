@@ -1,0 +1,64 @@
+---
+- hosts: all
+  any_errors_fatal: true
+  remote_user: root
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  roles:
+    - base
+
+- hosts: k8s
+  any_errors_fatal: true
+  remote_user: root
+  roles:
+    - k8s
+  tags:
+    - k8s
+
+- hosts: master0
+  any_errors_fatal: true
+  remote_user: root
+  roles:
+    - harbor
+  tags:
+    - harbor
+
+- hosts: k8s
+  any_errors_fatal: true
+  remote_user: root
+  roles:
+    - app
+  tags:
+    - app
+
+#- name: flink
+#  hosts: k8s
+#  any_errors_fatal: true
+#  remote_user: root
+#  roles:
+#    - { role: flink,
+#        tags: flink,
+#        when: enable_flink | default(true) | bool }
+
+#- hosts: master0
+#  any_errors_fatal: true
+#  remote_user: root
+#  roles:
+#    - rancher
+#  tags:
+#    - rancher
+#
+#- hosts: master0
+#  any_errors_fatal: true
+#  remote_user: root
+#  roles:
+#    - n9e
+#  tags:
+#    - n9e
+#
+#- hosts: all
+#  any_errors_fatal: true
+#  remote_user: root
+#  roles:
+#    - categraf
+

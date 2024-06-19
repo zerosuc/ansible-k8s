@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: testnfs
+  namespace: default
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  selector:
+    matchLabels:
+      app: testnfs
+  serviceName: testnfs
+  template:
+    metadata:
+      labels:
+        app: testnfs
+    spec:
+      containers:
+      - image: k8s/nginx
+        imagePullPolicy: IfNotPresent
+        name: demo-pv-nfs
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: demo-one
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: demo-one
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 100Mi
+      storageClassName: nfs
+      volumeMode: Filesystem

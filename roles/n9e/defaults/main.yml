@@ -1,0 +1,10 @@
+---
+# defaults file for n9e
+
+n9e_packages:
+  - package: "categraf.latest.tar"
+  - package: "ibex.0.3.tar"
+  - package: "mysql.5.7.tar"
+  - package: "nightingale.latest.tar"
+  - package: "prometheus.latest.tar.gz"
+  - package: "redis.6.2.tar"

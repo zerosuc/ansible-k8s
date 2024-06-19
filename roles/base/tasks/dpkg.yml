@@ -1,0 +1,12 @@
+---
+- name: Copy unzip .deb packages to target host for unarchive
+  copy:
+    src: "unzip.{{ansible_architecture}}.deb"
+    dest: "{{work_home}}/unzip.{{ansible_architecture}}.deb"
+    mode: 0755
+
+- name: Install unzip .deb packages
+  apt:
+    deb: "{{work_home}}/{{ item }}"
+  loop:
+    - "unzip.{{ansible_architecture}}.deb"

@@ -1,0 +1,202 @@
+---
+# tasks file for k8s
+- name: Remove docker relevant files
+  command: "yum remove docker* -y"
+  register: yum_result
+  failed_when: '"No Match for argument" not in yum_result.stderr and yum_result.rc != 0'
+  when:
+    - ansible_distribution is search("Kylin")
+
+# 0. scp sealos to env
+- name: set sealos to env
+  copy: "src=sealos-{{ansible_architecture}} dest=/usr/bin/sealos"
+#  when: inventory_hostname in groups['master0']
+
+- name: chmod sealos file
+  command: "chmod 777 /usr/bin/sealos"
+#  when: inventory_hostname in groups['master0']
+
+# 1. load sealos images
+- name: scp sealos images
+  copy: "src={{ item }} dest={{work_home}}/{{ item }}"
+  with_items:
+    - "kubernetes-docker.v1.21.8.{{ansible_architecture}}.tar.gz"
+    - "helm.v3.10.0.{{ansible_architecture}}.tar"
+#  when: inventory_hostname in groups['master0']
+
+- name: load sealos packages
+  command: "sealos  load -i {{work_home}}/{{ item }}"
+  with_items:
+    - "kubernetes-docker.v1.21.8.{{ansible_architecture}}.tar.gz"
+    - "helm.v3.10.0.{{ansible_architecture}}.tar"
+#  when: inventory_hostname in groups['master0']
+
+# 2. config clusterfile and install k8s
+- name: scp sealos clusterfile
+  template:
+    src: clusterfile.yaml.j2
+    dest: /home/clusterfile.yaml
+  when: inventory_hostname in groups['master0']
+
+- name: install k8s
+  when: inventory_hostname in groups['master0']
+  command: "sealos apply -f /home/clusterfile.yaml"
+  register: k8s_result # register指令把执行结果寄存到自定义变量中
+
+- name: echo k8s_result
+  when: inventory_hostname in groups['master0']
+  debug:
+    msg: "{{k8s_result}}"  # 打印变量
+
+### pause 30 seconds
+- name: wait 30 seconds for k8s
+  pause:
+    seconds: 30
+
+- name: Check the API servers are responding
+  uri:
+    url: "https://{{ master0ip | default(ansible_default_ipv4.address) }}:{{ kube_apiserver_port | default(6443) }}/version"
+    validate_certs: no
+    status_code: 200
+  register: apiserver_response
+  retries: 2
+  delay: 3
+  until: apiserver_response is success
+
+- debug:
+    msg: "{{ apiserver_response.json }}"
+
+- name: enable firewalld
+  when:
+    - enable_firewall | default(false)| bool
+    - inventory_hostname in groups['k8s']
+    - ansible_distribution == "CentOS" or ansible_distribution is search("Kylin") or ansible_distribution == "openEuler"
+  service:
+    name: firewalld
+    state: started
+    enabled: yes
+
+- name: k8s Enable UFW
+  ufw:
+    state: enabled
+  when:
+    - enable_firewall | default(false)| bool
+    - inventory_hostname in groups['k8s']
+    - ansible_distribution == "Ubuntu"
+
+#- name: Reload UFW
+#  ufw:
+#    state: reloaded
+#  when:
+#    - inventory_hostname in groups['k8s']
+#    - ansible_distribution == "Ubuntu"
+
+### 3. restart gpu and non gpu node docker conf
+- name: scp gpu daemon.json.j2
+  template:
+    src: gpu-daemon.json.j2
+    dest: /etc/docker/daemon.json
+  when: inventory_hostname  in groups['labelgpu']
+
+- name: restart gpu docker conf
+  service:
+    name: docker
+    state: restarted
+  when: inventory_hostname  in groups['labelgpu']
+
+- name:  scp non gpu daemon.json.j2
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+  when: inventory_hostname  in groups['nongpu']
+
+- name: restart non-gpu docker conf
+  service:
+    name: docker
+    state: restarted
+  when: inventory_hostname  in groups['nongpu']
+
+### restart master0 docker.service
+- name: cp docker.service
+  #  when: inventory_hostname in groups['master0']
+  template:
+    src: "docker.service.j2"
+    dest: "/etc/systemd/system/docker.service"
+
+- name: restart  docker.service
+  #  when: inventory_hostname in groups['master0']
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: docker
+    enabled: yes
+
+
+# 2. gpu container runtime pkg  需要先有docker 才可以！
+- name: gpu dir
+  file:
+    path: /tmp/gpu
+    state: directory
+  when: inventory_hostname  in groups['labelgpu']
+
+- name: gpu container runtime cp files
+  copy: "src={{ item['package'] }}.rpm  dest=/tmp/gpu"
+  with_items: "{{ gpu_packages }}"
+  when:
+    - inventory_hostname  in groups['labelgpu']
+    - ansible_architecture == "x86_64"
+
+- name: Install gpu container runtime  packages
+  command: "rpm -ivh /tmp/gpu/*.rpm --force"
+  when:
+    - inventory_hostname  in groups['labelgpu']
+    - ansible_architecture == "x86_64"
+
+- name: arm gpu container runtime cp files
+  copy: "src={{ item['package'] }}.rpm  dest=/tmp/gpu"
+  with_items: "{{ arm_gpu_packages }}"
+  when:
+    - inventory_hostname  in groups['labelgpu']
+    - ansible_architecture == "aarch64"
+
+- name: arm Install gpu container runtime  packages
+  command: "rpm -ivh /tmp/gpu/*.rpm --force"
+  when:
+    - inventory_hostname  in groups['labelgpu']
+    - ansible_architecture == "aarch64"
+
+## 4. start rpcbind service
+- name:  start rpcbind.service
+  service:
+    name: rpcbind
+    state: started
+    enabled: yes
+
+### pause 1 min for pod ingress ok
+- name: wait 1 min for k8s system pod is ok
+  pause:
+    minutes: 1
+
+- name: scp flannel docker  images
+  copy: "src=flannel.{{ansible_architecture}}.tar  dest=/home"
+#  when: inventory_hostname in groups['master0']
+
+- name: load flannel docker images
+  command: "docker load -i /home/flannel.{{ansible_architecture}}.tar"
+#  when: inventory_hostname in groups['master0']
+
+##. 生成flannel
+- name: cp flannel.yaml.j2
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "flannel.yaml.j2"
+    dest: "/home/flannel.yaml"
+
+##. 生成harbor pull image policy
+- name: apply flannel
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/flannel.yaml"
+
+- name: Docker proxy tag
+  command: docker tag sealos.hub:5000/kube-proxy:v1.21.8 k8s.gcr.io/kube-proxy:v1.21.8
+  when: inventory_hostname not in groups['master0']

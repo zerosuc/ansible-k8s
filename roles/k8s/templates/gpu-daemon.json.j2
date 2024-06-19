@@ -1,0 +1,24 @@
+{
+  "max-concurrent-downloads": 20,
+  "log-driver": "json-file",
+  "log-level": "warn",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "exec-opts": [
+    "native.cgroupdriver=systemd"
+  ],
+  "insecure-registries": [
+    "sealos.hub:5000",
+    "{{ harborip }}:{{harborport}}"
+  ],
+  "default-runtime":"nvidia",
+  "runtimes": {
+    "nvidia": {
+      "path":"/usr/bin/nvidia-container-runtime",
+      "runtimeArgs":[]
+    }},
+  "registry-mirrors": ["http://{{ harborip }}:{{harborport}}","https://g6qv8ev4.mirror.aliyuncs.com","https://docker.m.daocloud.io"],
+  "data-root": "{{data_dir}}/k8s/docker"
+}

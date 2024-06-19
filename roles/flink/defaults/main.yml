@@ -1,0 +1,4 @@
+tar_packages:
+  - package: "{{ansible_architecture}}/1.16.1-scala_2.12.tar"
+  - package: "{{ansible_architecture}}/pushgateway-{{ansible_architecture}}.tar.gz"
+

@@ -1,0 +1,79 @@
+### task for vp center
+- name: create vpcenter home dir
+  when: inventory_hostname in groups['master0']
+  file:
+    path: "{{ vpcenter_home }}"
+    state: directory
+    recurse: yes
+
+### 1. scp  images
+- name: scp  vpcenter tar.gz
+  when: inventory_hostname in groups['master0']
+  copy: "src={{ item }} dest=/home/{{ item }}"
+  with_items:
+    - "vpcenter.tar.gz"
+
+- name: load  vpcenter  images
+  when: inventory_hostname in groups['master0']
+  command: "docker load -i /home/{{ item }}"
+  with_items:
+    - "vpcenter.tar.gz"
+
+### 2. unzip file
+- name: unarchive vpcenter zip
+  when: inventory_hostname in groups['master0']
+  unarchive:
+    src: "vpcenter.zip"
+    dest:  "{{ vpcenter_home }}"
+
+- name: unzip  vpcenter  images
+  when: inventory_hostname in groups['master0']
+  command: "docker load -i /home/{{ item }}"
+  with_items:
+    - "vpcenter.tar.gz"
+
+### 3. cp tools/
+- name: template tool.sh.j2
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "tool.sh.j2"
+    dest: "/home/tool.sh"
+    mode: "0775"
+
+- name: exe tool.sh
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/tool.sh"
+
+### 4. replace local ip
+- name: template application.j2
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "application.yml.j2"
+    dest: "{{ vpcenter_home }}/vpcenter/common/vpcenterapi/application.yml"
+
+- name: template docker-compose.j2
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "docker-compose.yml.j2"
+    dest: "{{ vpcenter_home }}/vpcenter/docker-compose.yml"
+
+#### 5. docker-compose up
+- name: Setup vpcenter
+  when: inventory_hostname in groups['master0']
+  shell: "docker-compose up -d"
+  args:
+    chdir: "{{ vpcenter_home }}/vpcenter"
+
+#### 6. debug stdout
+- name: Check vpcenter installation status
+  when: inventory_hostname in groups['master0']
+  shell: "docker-compose ps"
+  args:
+    chdir: "{{ vpcenter_home }}/vpcenter"
+  register: compose_ps
+
+- name: List of active vpcenter containers
+  when: inventory_hostname in groups['master0']
+  debug: msg="{{ compose_ps.stdout }}"
+
+

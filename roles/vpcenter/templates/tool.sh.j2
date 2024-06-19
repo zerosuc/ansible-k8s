@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+
+function cp_tools() {
+    sudo cp $(which helm) $(which kubectl) {{vpcenter_home}}/vpcenter/tools
+}
+
+cp_tools

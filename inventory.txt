@@ -1,0 +1,80 @@
+[all:vars]
+##是否是all-in-one,如果只有一个节点填yes,否则填no
+enable_all_in_one=yes
+
+ansible_ssh_user=root
+ansible_ssh_port=22
+ansible_ssh_pass=u1
+
+master0ip=10.200.30.8
+
+## 如果现场没有ntp服务器,使能本地 enable_local_ntp_server 服务器为yes
+## 默认是需要有远程ntp-server的;所以默认为no
+enable_local_ntp_server=no
+## 远程真实ntp地址 enable_local_ntp_server="no"才填
+ntpip=182.92.12.11
+
+harborip=10.200.30.8
+harborport=8081
+podcidr="172.19.0.0/16"
+svccidr="172.20.0.0/16"
+
+work_home="/home/work"
+harbor_home="/home/zxw-harbor"
+data_dir=/data
+harbordir="{{data_dir}}/zxw-harbor"
+harborlogsdir="{{data_dir}}/zxw-harbor/logs"
+n9e_home="{{data_dir}}/n9e-home"
+tar_home="{{data_dir}}/tar-home"
+flink_tar_home="{{data_dir}}/flink"
+
+###是否开启防火墙
+enable_firewall="no"
+
+## 是否使能本地nfs,如果现场没有nfs服务器;则需要使能本地nfs;填写为yes 为yes,则表示nfsserver-local作为了flink-nfs的地址了
+## 如果为no则表示  不需要使能本地nfs,表示现场有现成的可用地址
+enable_nfs_local="yes"
+## 如果上面填写no 才需要填写下面的两个远程现成的 nfs参数 此为flink的nfs pv地址
+nfs_server_remote=10.200.30.8
+nfs_db_path_remote=/data/nfs
+
+##本地nfs地址和挂载路径;enable_nfs_local="yes"的时候才生效
+[nfsserver-local]
+10.200.30.8
+[nfsserver-local:vars]
+nfs_server=10.200.30.8
+nfs_db_path=/data/nfs
+
+[all]
+10.200.30.8 hostname=k8s.master-00.local
+
+[k8s:children]
+master
+node
+
+[master]
+## 所有的master节点
+10.200.30.8
+
+[node]
+### 所有的非master节点
+
+
+[master0]
+#only master0
+10.200.30.8
+
+[labelgpu]
+## for all gpu node
+
+[ingressnode]
+## 你要设置ingress的node
+10.200.30.8
+
+[pushgwnode]
+## pushgw部署的节点
+
+
+[nongpu]
+### 包括所有的非gpu节点,如果master是非gpu也必须填入
+10.200.30.8s

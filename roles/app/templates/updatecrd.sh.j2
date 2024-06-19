@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+function crd() {
+  kubectl patch prometheus -n cattle-monitoring-system   rancher-monitoring-prometheus  --type='merge' -p='{"spec":{"remoteWrite":[{"url":"http://{{master0ip}}:19000/prometheus/v1/write"}],"additionalScrapeConfigs":{"name":"additional-scrape-configs","key":"prometheus-additional.yaml"}}}'
+}
+
+crd

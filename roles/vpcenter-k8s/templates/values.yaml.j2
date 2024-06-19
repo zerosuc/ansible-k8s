@@ -1,0 +1,228 @@
+
+global:
+  image:
+    pullPolicy: Always
+    imagePullSecrets:
+      - name: harbor
+
+  # 日志存放目录
+  logsPath: /opt/app
+  statefulset:
+    enabled: true
+    type: {{global_statefulset_type}}
+  #是否使用HTTPS访问
+  is_https: {{global_is_https}}
+
+nameOverride: ""
+fullnameOverride: ""
+
+# 用户管理模块配置
+vias-user:
+  viasUser:
+    name: security-user
+    image:
+      name: vpcenter/common/vias-user
+      tag: {{ viasUser_image_tag }}
+    resources:
+      memoryLimit: 4Gi
+      cpuLimit: 2
+    service:
+      type: ClusterIP
+      port: 9088
+    evn:
+      JAVA_OPTS:
+      JVM_OPTS:
+
+  redis:
+    image:
+      registry:
+      repository: common/redis
+      tag: "{{ redis_tag }}{% if ansible_architecture == 'aarch64' or ansible_architecture == 'arm' %}-aarch64{% else %}{% endif %}"
+    auth:
+      password: "myredis"
+    master:
+      service:
+        type: ClusterIP
+      persistence:
+        path: /data
+        storageClass: "local"
+        size: 1Gi
+    replica:
+      replicaCount: 1
+      service:
+        type: ClusterIP
+      persistence:
+        path: /data
+        storageClass: "local"
+        size: 1Gi
+
+  postgresql:
+    name: postgres-user
+    imagePullSecrets:
+      - name: harobr
+    image:
+      name: common/postgres
+      tag: "{{ pg_tag }}{% if ansible_architecture == 'aarch64' or ansible_architecture == 'arm' %}-aarch64{% else %}{% endif %}"
+    replicaCount: 1
+    service:
+      type: ClusterIP
+      port: 5432
+    env:
+      - name: POSTGRES_USER
+        value: uam
+      - name: POSTGRES_PASSWORD
+        value: Uam123
+      - name: POSTGRES_DB
+        value: security
+    persistence:
+      enabled: true
+      storageSize: 10G
+      accessMode: ReadWriteOnce
+
+  config:
+    security:
+      passwordRegex: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^*&+=])(?=\\\\S+$).{8,16}$"
+      passwordMsg: "密码强度未达要求，必须同时包含数字大小写字母以及特殊字符,长度8-16位"
+
+postgresql:
+  name: postgres
+  imagePullSecrets:
+    - name: harobr
+  image:
+    name: common/postgres
+    tag: "{{ pg_tag }}{% if ansible_architecture == 'aarch64' or ansible_architecture == 'arm' %}-aarch64{% else %}{% endif %}"
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 5432
+  env:
+    - name: POSTGRES_USER
+      value: uam
+    - name: POSTGRES_PASSWORD
+      value: Uam123
+    - name: POSTGRES_DB
+      value: vpcenter
+  persistence:
+    enabled: true
+    storageSize: {{postgresql_persistence_storageSize}}
+    accessMode: ReadWriteOnce
+
+common:
+  name: vpcenter
+  image:
+    name: vpcenter/vpcenter-api
+    tag: '{{common_image_tag}}'
+  front:
+    name: vpcenterfront
+    image:
+      name: vpcenter/vpcenter-front
+      tag: '{{common_front_image_tag}}'
+    service:
+      port: 8080
+  resources:
+    memoryLimit: 4Gi
+    cpuLimit: 2
+  service:
+    type: ClusterIP
+    port: 8083
+  replicaCount: 1
+  persistence:
+    storageSize: {{common_persistence_storageSize}}
+    accessMode: ReadWriteOnce
+
+  kafka:
+    output:
+      server: 10.30.26.206:9094
+      acks: 1
+      retries: 4
+      batchSize: 16384
+      properties:
+        linger:
+          ms: 100
+      bufferMemory: 33554432
+
+  log2vkit:
+    enable: false
+    topic: 'wang-test'
+
+  jwt:
+    secret: kxq5zzh8s750timz
+    expiration: 7200000 #有效时间，毫秒
+    header: token
+    verifyCode: false #验证码
+
+  uploadFile:
+    path: /opt/upload/vpcenter
+    kubectlConfigPath: /root
+
+  docker:
+    url: {{common_docker_url}}
+
+  harbor:
+    loginAddress: {{common_harbor_loginAddress}}
+    userName: {{common_harbor_userName}}
+    password: {{common_harbor_password}}
+    vsapAddress: http://{{ groups['ingressnode'][0] }}/{{common_harbor_vsapAddress}}
+
+  schedule:
+    fixedDelayString: 60000
+
+  framework:
+    security:
+      cryptPassword: true
+      enabled: true
+      swaggerEnabled: true
+      userApiUrl: http://vias-vpcenter-vias-user:9088
+
+  license:
+    path: /vpcenterapi/license
+
+  evn:
+    JAVA_OPTS:
+    JVM_OPTS:
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of dd create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 20m
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/client-body-buffer-size: 20m
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /vias
+          pathType: ImplementationSpecific
+  tls: []
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
