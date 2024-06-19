@@ -7,7 +7,7 @@ docker-compose-Linux-x86_64
 *.zip
 *.tar.gz
 application.yml.*
-.deb
+*.deb
 *.pyc
 roles/app/files/zxw.aarch64
 roles/app/files/zxw.x86_64

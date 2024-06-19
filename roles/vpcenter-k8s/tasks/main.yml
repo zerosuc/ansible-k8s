@@ -14,7 +14,6 @@
   when:
     - inventory_hostname in groups['master0']
 
-
 - name: unarchive vpceter chart files
   unarchive:
     src: "vias-vpcenter.zip"
