@@ -1,0 +1,20 @@
+
+- name: scp base docker  images
+  copy: "src={{ item['package'] }}  dest={{tar_home}}/{{ansible_architecture}}/"
+  with_items: "{{ tar_packages }}"
+  when: ansible_architecture == "x86_64"
+
+- name: load base docker images
+  command: "docker load -i {{tar_home}}/{{ item['package'] }}"
+  with_items: "{{ tar_packages }}"
+  when: ansible_architecture == "x86_64"
+
+- name: scp base docker  images
+  copy: "src={{ item['package'] }}  dest={{tar_home}}/{{ansible_architecture}}/"
+  with_items: "{{ arm_tar_packages }}"
+  when: ansible_architecture == "aarch64"
+
+- name: load base docker images
+  command: "docker load -i {{tar_home}}/{{ item['package'] }}"
+  with_items: "{{ arm_tar_packages }}"
+  when: ansible_architecture == "aarch64"

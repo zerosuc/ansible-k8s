@@ -1,0 +1,17 @@
+###  import images tars
+- name: create all tar
+  file:
+    path: "{{ tar_home }}"
+    state: directory
+    recurse: yes
+
+- name: create monitor tar
+  file:
+    path: "{{ tar_home }}/monitor"
+    state: directory
+    recurse: yes
+
+- name: login harbor
+  command: "docker login {{master0ip}}:{{harborport}}  -u admin -p {{harbor_pwd}}"
+
+

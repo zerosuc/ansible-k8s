@@ -1,0 +1,15 @@
+### all in one
+- name: cp master-taint.sh
+  copy:
+    src: "master-taint.sh"
+    dest: "/home/master-taint.sh"
+    mode: 0777
+  when:
+    - inventory_hostname in groups['master0']
+    - enable_all_in_one | bool
+
+- name: master0 can run app pod
+  command: "bash -x /home/master-taint.sh"
+  when:
+    - inventory_hostname in groups['master0']
+    - enable_all_in_one | bool

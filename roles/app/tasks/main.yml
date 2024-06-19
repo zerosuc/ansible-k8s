@@ -1,129 +1,43 @@
 ---
 ### tasks file for app
-- name: cp master-taint.sh
-  copy:
-    src: "master-taint.sh"
-    dest: "/home/master-taint.sh"
-    mode: 0777
-  when:
-  - inventory_hostname in groups['master0']
-  - enable_all_in_one | bool
+- name: Include all-in-one.yml
+  include_tasks: all-in-one.yml
 
-- name: master0 can run app pod
-  command: "bash -x /home/master-taint.sh"
-  when:
-  - inventory_hostname in groups['master0']
-  - enable_all_in_one | bool
+- name: Include pre.yml
+  include_tasks: pre.yml
 
-###  import images tars
-- name: create all tar
-  file:
-    path: "{{ tar_home }}"
-    state: directory
-    recurse: yes
+- name: Include base.yml
+  include_tasks: base.yml
 
-- name: scp base docker  images
-  copy: "src={{ item['package'] }}  dest={{tar_home}}/{{ansible_architecture}}/"
-  with_items: "{{ tar_packages }}"
-  when: ansible_architecture == "x86_64"
+- name: Include monitor.yml
+  include_tasks: monitor.yml
 
-- name: load base docker images
-  command: "docker load -i {{tar_home}}/{{ item['package'] }}"
-  with_items: "{{ tar_packages }}"
-  when: ansible_architecture == "x86_64"
+- name: Include harbor.yml
+  include_tasks: harbor.yml
 
-- name: scp base docker  images
-  copy: "src={{ item['package'] }}  dest={{tar_home}}/{{ansible_architecture}}/"
-  with_items: "{{ arm_tar_packages }}"
-  when: ansible_architecture == "aarch64"
-
-- name: load base docker images
-  command: "docker load -i {{tar_home}}/{{ item['package'] }}"
-  with_items: "{{ arm_tar_packages }}"
-  when: ansible_architecture == "aarch64"
-
-### pure rancher monitor image pkg
-- name: create monitor tar
-  file:
-    path: "{{ tar_home }}/monitor"
-    state: directory
-    recurse: yes
-
-- name: scp monitor docker  images
-  copy: "src={{ item['package'] }}  dest={{tar_home}}/monitor"
-  with_items: "{{ monitor_tar_packages }}"
-  when: ansible_architecture == "x86_64"
-
-- name: load monitor docker images
-  command: "docker load -i {{tar_home}}/{{ item['package'] }}"
-  with_items: "{{ monitor_tar_packages }}"
-  when: ansible_architecture == "x86_64"
-
-- name: scp monitor docker  images
-  copy: "src=monitor.imgs.tar.gz  dest={{tar_home}}/monitor"
-  when: ansible_architecture == "aarch64"
-
-- name: load monitor docker images
-  command: "docker load -i {{tar_home}}/monitor/monitor.imgs.tar.gz"
-  when: ansible_architecture == "aarch64"
-
-## upload to harbor
-- name: cp zxw upload bin
-  copy: "src=zxw.{{ansible_architecture}}  dest={{tar_home}}/zxw"
-  when: inventory_hostname in groups['master0']
-
-- name: down harbor
-  command: "docker-compose down "
-  args:
-    chdir: "{{ harbor_home }}/harbor"
-  when:
-   - inventory_hostname in groups['master0']
-   - ansible_distribution == "openEuler"
-
-- name: wait 5 seconds
-  pause:
-    seconds: 5
-
-- name: restart harbor
-  command: "docker-compose up -d"
-  args:
-    chdir: "{{ harbor_home }}/harbor"
-  when:
-    - inventory_hostname in groups['master0']
-    - ansible_distribution == "openEuler"
-
-- name: wait 5 seconds
-  pause:
-    seconds: 5
-
-- name: login harbor
-  command: "docker login {{master0ip}}:{{harborport}}  -u admin -p Harbor12345"
-
-
-- name: cp harbor.sh.j2
-  when: inventory_hostname in groups['master0']
-  template:
-    src: "harbor.sh.j2"
-    dest: "/home/harbor.sh"
-
-- name: create prj k8s in harbor
-  when: inventory_hostname in groups['master0']
-  command: "bash -x /home/harbor.sh"
-
-
-- name: chmod zxw upload bin
-  command: "chmod 777 {{tar_home}}/zxw"
-  when: inventory_hostname in groups['master0']
-
-- name: upload images to harbor
-  command: "{{tar_home}}/zxw push  -r={{master0ip}}:{{harborport}}"
-  when: inventory_hostname in groups['master0']
-  register: upload_result
-
-- name: echo upload_result
-  when: inventory_hostname in groups['master0']
-  debug:
-    msg: "{{upload_result}}"
+#- name: down harbor
+#  command: "docker-compose down "
+#  args:
+#    chdir: "{{ harbor_home }}/harbor"
+#  when:
+#   - inventory_hostname in groups['master0']
+#   - ansible_distribution == "openEuler"
+#
+#- name: wait 5 seconds
+#  pause:
+#    seconds: 5
+#
+#- name: restart harbor
+#  command: "docker-compose up -d"
+#  args:
+#    chdir: "{{ harbor_home }}/harbor"
+#  when:
+#    - inventory_hostname in groups['master0']
+#    - ansible_distribution == "openEuler"
+#
+#- name: wait 5 seconds
+#  pause:
+#    seconds: 5
 
 
 - name: create secret harbor
@@ -173,7 +87,6 @@
   when: inventory_hostname in groups['master0']
   command: "kubectl apply -f /home/local-sc.yaml"
 
-
 ## 14. metrics server
 - name: cp metrics-server.yaml
   when: inventory_hostname in groups['master0']
@@ -185,7 +98,6 @@
 - name: apply metrics-server.yaml
   when: inventory_hostname in groups['master0']
   command: "kubectl apply -f /home/metrics-server.yaml"
-
 
 #### flashcat
 - name: create ns flashcat
@@ -218,7 +130,6 @@
 - name: apply per pod per svc yaml
   when: inventory_hostname in groups['master0']
   command: " kubectl apply -k  /home/metacontroller/examples/service-per-pod/manifest/  "
-
 
 - name: template prometheus-additional.yaml
   when: inventory_hostname in groups['master0']
@@ -269,7 +180,6 @@
 - name: apply rancher monitoring yaml
   when: inventory_hostname in groups['master0']
   shell: "helm install rancher-monitoring  /home/rancher-monitoring -n cattle-monitoring-system"
-
 
 #- name: cp nfs yaml
 #  when: inventory_hostname in groups['master0']

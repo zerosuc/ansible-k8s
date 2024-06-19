@@ -1,0 +1,18 @@
+### pure rancher monitor image pkg
+- name: scp monitor docker  images
+  copy: "src={{ item['package'] }}  dest={{tar_home}}/monitor"
+  with_items: "{{ monitor_tar_packages }}"
+  when: ansible_architecture == "x86_64"
+
+- name: load monitor docker images
+  command: "docker load -i {{tar_home}}/{{ item['package'] }}"
+  with_items: "{{ monitor_tar_packages }}"
+  when: ansible_architecture == "x86_64"
+
+- name: scp monitor docker  images
+  copy: "src=monitor.imgs.tar.gz  dest={{tar_home}}/monitor"
+  when: ansible_architecture == "aarch64"
+
+- name: load monitor docker images
+  command: "docker load -i {{tar_home}}/monitor/monitor.imgs.tar.gz"
+  when: ansible_architecture == "aarch64"

@@ -1,0 +1,29 @@
+## create harbor k8s project &&  upload to harbor
+
+- name: cp harbor.sh.j2
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "harbor.sh.j2"
+    dest: "/home/harbor.sh"
+
+- name: create prj k8s in harbor
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/harbor.sh"
+
+- name: cp zxw upload bin
+  copy: "src=zxw.{{ansible_architecture}}  dest={{tar_home}}/zxw"
+  when: inventory_hostname in groups['master0']
+
+- name: chmod zxw upload bin
+  command: "chmod 777 {{tar_home}}/zxw"
+  when: inventory_hostname in groups['master0']
+
+- name: upload images to harbor
+  command: "{{tar_home}}/zxw push  -r={{master0ip}}:{{harborport}}"
+  when: inventory_hostname in groups['master0']
+  register: upload_result
+
+- name: echo upload_result
+  when: inventory_hostname in groups['master0']
+  debug:
+    msg: "{{upload_result}}"

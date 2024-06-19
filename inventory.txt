@@ -27,6 +27,7 @@ harborlogsdir="{{data_dir}}/zxw-harbor/logs"
 n9e_home="{{data_dir}}/n9e-home"
 tar_home="{{data_dir}}/tar-home"
 flink_tar_home="{{data_dir}}/flink"
+harbor_pwd="Harbor12345"
 
 ###是否开启防火墙
 enable_firewall="no"
@@ -77,4 +78,4 @@ node
 
 [nongpu]
 ### 包括所有的非gpu节点,如果master是非gpu也必须填入
-10.200.30.8s
+10.200.30.8
