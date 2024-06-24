@@ -1,0 +1,35 @@
+- name: cp nfs yaml
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "nfs.yaml.j2"
+    dest: "/home/nfs.yaml"
+
+- name: apply nfs
+#  when:
+#    - not enable_nfs_local | bool
+  command: "kubectl apply -f /home/nfs.yaml"
+
+- name: cp testnfs.yaml
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "testnfs.yaml"
+    dest: "/home/testnfs.yaml"
+
+- name: apply testnfs.yaml
+  when:
+  - inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/testnfs.yaml"
+
+#- name: cp nfs-local yaml
+#  when:
+#    - enable_nfs_local | bool
+#    - inventory_hostname in groups['nfsserver-local']
+#  template:
+#    src: "nfs.local.yaml.j2"
+#    dest: "/home/nfs.local.yaml"
+#
+#- name: apply  nfsserver-local nfs
+#  when:
+#    - enable_nfs_local | bool
+#    - inventory_hostname in groups['nfsserver-local']
+#  command: "kubectl apply -f /home/nfs.local.yaml"

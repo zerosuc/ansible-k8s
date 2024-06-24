@@ -1,22 +1,25 @@
 ---
 ### tasks file for app
-- name: Include all-in-one.yml
-  include_tasks: all-in-one.yml
+#- name: Include all-in-one.yml
+#  include_tasks: all-in-one.yml
+#
+#- name: Include pre.yml
+#  include_tasks: pre.yml
+#
+#- name: Include base.yml
+#  include_tasks: base.yml
+#
+#- name: Include monitor.yml
+#  include_tasks: monitor.yml
+#
+#- name: Include app.yml
+#  include_tasks: app.yml
+#
+#- name: Include harbor.yml
+#  include_tasks: harbor.yml
 
-- name: Include pre.yml
-  include_tasks: pre.yml
-
-- name: Include base.yml
-  include_tasks: base.yml
-
-- name: Include monitor.yml
-  include_tasks: monitor.yml
-
-- name: Include app.yml
-  include_tasks: app.yml
-
-- name: Include harbor.yml
-  include_tasks: harbor.yml
+- name: Include nfs.yaml
+  include_tasks: nfs.yaml
 
 #- name: down harbor
 #  command: "docker-compose down "
@@ -149,31 +152,6 @@
 #  when: inventory_hostname in groups['master0']
 #  shell: "helm install rancher-monitoring  /home/rancher-monitoring -n cattle-monitoring-system"
 #
-##- name: cp nfs yaml
-##  when: inventory_hostname in groups['master0']
-##  template:
-##    src: "nfs.yaml.j2"
-##    dest: "/home/nfs.yaml"
-##
-##- name: cp nfs-local yaml
-##  when:
-##    - enable_nfs_local | bool
-##    - inventory_hostname in groups['nfsserver-local']
-##  template:
-##    src: "nfs.local.yaml.j2"
-##    dest: "/home/nfs.local.yaml"
-#
-###8.  apply  nfs
-##- name: apply  nfsserver-local nfs
-##  when:
-##    - enable_nfs_local | bool
-##    - inventory_hostname in groups['nfsserver-local']
-##  command: "kubectl apply -f /home/nfs.local.yaml"
-##
-##- name: apply nfs
-##  when:
-##    - not enable_nfs_local | bool
-##  command: "kubectl apply -f /home/nfs.yaml"
 #
 ### 15. test ingress
 #- name: cp test-ingress.yaml
@@ -193,17 +171,6 @@
 #  when: inventory_hostname in groups['master0']
 #  command: "kubectl apply -f /home/test-ingress.yaml"
 #
-##- name: cp testnfs.yaml
-##  when: inventory_hostname in groups['master0']
-##  copy:
-##    src: "testnfs.yaml"
-##    dest: "/home/testnfs.yaml"
-##
-####8.  apply  testnfs sc
-##- name: apply testnfs.yaml
-##  when:
-##  - inventory_hostname in groups['master0']
-##  command: "kubectl apply -f /home/testnfs.yaml"
 #
 ####13. gpu yaml
 #- name: cp gpu.yaml

@@ -1,27 +1,27 @@
 ---
-- hosts: all
-  any_errors_fatal: true
-  remote_user: root
-  vars:
-    ansible_python_interpreter: /usr/bin/python3
-  roles:
-    - base
-
-- hosts: k8s
-  any_errors_fatal: true
-  remote_user: root
-  roles:
-    - k8s
-  tags:
-    - k8s
-
-- hosts: master0
-  any_errors_fatal: true
-  remote_user: root
-  roles:
-    - harbor
-  tags:
-    - harbor
+#- hosts: all
+#  any_errors_fatal: true
+#  remote_user: root
+#  vars:
+#    ansible_python_interpreter: /usr/bin/python3
+#  roles:
+#    - base
+#
+#- hosts: k8s
+#  any_errors_fatal: true
+#  remote_user: root
+#  roles:
+#    - k8s
+#  tags:
+#    - k8s
+#
+#- hosts: master0
+#  any_errors_fatal: true
+#  remote_user: root
+#  roles:
+#    - harbor
+#  tags:
+#    - harbor
 
 - hosts: k8s
   any_errors_fatal: true

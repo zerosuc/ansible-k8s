@@ -10,7 +10,7 @@ metadata:
   name: jenkins-pvc
   namespace: kube-ops
 spec:
-  storageClassName: local # 指定一个可用的 storageclass
+  storageClassName: nfs # 指定一个可用的 storageclass
   accessModes:
     - ReadWriteOnce
   resources:
@@ -87,7 +87,7 @@ spec:
               mountPath: /var/jenkins_home
       containers:
         - name: jenkins
-          image: jenkins/jenkins:2.388
+          image: jenkins/jenkins:2.402
           imagePullPolicy: IfNotPresent
           env:
             - name: JAVA_OPTS
@@ -102,10 +102,10 @@ spec:
           resources:
             limits:
               cpu: 1500m
-              memory: 4000Mi
+              memory: 6000Mi
             requests:
               cpu: 1500m
-              memory: 4000Mi
+              memory: 6000Mi
           readinessProbe:
             httpGet:
               path: /login
