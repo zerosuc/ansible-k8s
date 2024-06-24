@@ -1,5 +1,8 @@
 ## create harbor k8s project &&  upload to harbor
 
+- name: login harbor
+  command: "docker login {{master0ip}}:{{harborport}}  -u admin -p {{harbor_pwd}}"
+
 - name: cp harbor.sh.j2
   when: inventory_hostname in groups['master0']
   template:

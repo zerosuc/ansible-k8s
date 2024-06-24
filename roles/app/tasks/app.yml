@@ -1,0 +1,36 @@
+##10.生成 ingress
+- name: cp ingress.yaml
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "ingress-nginx.yaml.j2"
+    dest: "/home/ingress-nginx.yaml"
+
+###8.  apply  ingress
+- name: apply ingress
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/ingress-nginx.yaml"
+
+
+##10.生成 ingress
+- name: template storage class
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "local-sc.yaml.j2"
+    dest: "/home/local-sc.yaml"
+
+##8.  apply  local sc
+- name: apply local sc
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/local-sc.yaml"
+
+## 14. metrics server
+- name: cp metrics-server.yaml
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "metrics-server.yaml"
+    dest: "/home/metrics-server.yaml"
+
+##8.  apply  local sc
+- name: apply metrics-server.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/metrics-server.yaml"
