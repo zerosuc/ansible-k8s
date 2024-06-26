@@ -43,7 +43,6 @@
 
 - name: create nfs local jar dir
   command: "mkdir -p {{nfs_db_path}}"
-  register: flink_result
   when:
     - enable_nfs_local | bool
     - inventory_hostname in groups['nfsserver-local']

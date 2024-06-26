@@ -8,6 +8,8 @@
     - inventory_hostname in groups['master0']
     - not enable_local_ntp_server | bool
 
+- name: Set timezone to Asia/Shanghai
+  command: timedatectl set-timezone Asia/Shanghai
 
 #- name: Stop and disable firewalld
 #  when: inventory_hostname in groups['k8s']
@@ -142,6 +144,22 @@
     - {"dest":"/etc/security/limits.conf","limit_type": "soft", "limit_item":"nproc", "value": 131072}
     - {"dest": "/etc/security/limits.d/20-nproc.conf", "limit_type": "soft", "limit_item": "nproc", "value": 131072}
 
+## 针对Ubuntu  domain * 不生效需要 domain为root
+- name: modify security limits
+  when:
+    - inventory_hostname  in groups['k8s']
+    - ansible_distribution == "Ubuntu"
+  pam_limits:
+    dest: "{{item.dest}}"
+    domain: "root"
+    limit_type: "{{item.limit_type}}"
+    limit_item: "{{item.limit_item}}"
+    value: "{{item.value}}"
+  with_items:
+    - {"dest":"/etc/security/limits.conf","limit_type": "soft", "limit_item":"nofile", "value": 655360}
+    - {"dest":"/etc/security/limits.conf","limit_type": "hard", "limit_item":"nofile", "value": 655360}
+    - {"dest":"/etc/security/limits.conf","limit_type": "hard", "limit_item":"nproc", "value": 131072}
+    - {"dest":"/etc/security/limits.conf","limit_type": "soft", "limit_item":"nproc", "value": 131072}
 
 # - name: cp ssh sh file
 #   copy: "src=ssh.sh dest={{work_home}}/ssh.sh"
