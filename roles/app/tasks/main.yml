@@ -1,248 +1,39 @@
 ---
-### tasks file for app
-#- name: Include all-in-one.yml
-#  include_tasks: all-in-one.yml
-#
-#- name: Include pre.yml
-#  include_tasks: pre.yml
-#
-#- name: Include base.yml
-#  include_tasks: base.yml
-#
-#- name: Include monitor.yml
-#  include_tasks: monitor.yml
-#
-#- name: Include app.yml
-#  include_tasks: app.yml
-#
-#- name: Include harbor.yml
-#  include_tasks: harbor.yml
+### tasks file for main
+- name: Include all-in-one.yml
+  include_tasks: all-in-one.yml
+
+- name: Include pre.yml
+  include_tasks: pre.yml
+
+- name: Include images/image.yml
+  include_tasks: images/image.yml
+
+- name: Include app.yml
+  include_tasks: app.yml
+
+- name: Include harbor.yml
+  include_tasks: harbor.yml
 
 - name: Include nfs.yaml
   include_tasks: nfs.yaml
 
-#- name: down harbor
-#  command: "docker-compose down "
-#  args:
-#    chdir: "{{ harbor_home }}/harbor"
-#  when:
-#   - inventory_hostname in groups['master0']
-#   - ansible_distribution == "openEuler"
-#
-#- name: wait 5 seconds
-#  pause:
-#    seconds: 5
-#
-#- name: restart harbor
-#  command: "docker-compose up -d"
-#  args:
-#    chdir: "{{ harbor_home }}/harbor"
-#  when:
-#    - inventory_hostname in groups['master0']
-#    - ansible_distribution == "openEuler"
-#
-#- name: wait 5 seconds
-#  pause:
-#    seconds: 5
+- name: Include n9e.yaml
+  include_tasks: n9e.yaml
 
-#
-#- name: create secret harbor
-#  when: inventory_hostname in groups['master0']
-#  shell: " kubectl create secret generic harbor \
-#    --from-file=.dockerconfigjson=/root/.docker/config.json \
-#    --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f -"
-#
-#- name: create secret 151harbor
-#  when: inventory_hostname in groups['master0']
-#  shell: " kubectl create secret generic 151harbor \
-#    --from-file=.dockerconfigjson=/root/.docker/config.json \
-#    --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f - "
-#
-#- name: label gpu node
-#  command: "kubectl label node  {{hostvars[item]['hostname']}}  nvidia.com/gpu.present=true  --overwrite"
-#  with_items: "{{ groups['labelgpu'] }}"
-#  when: inventory_hostname in groups['master0']
-#
-#- name: label ingerss node
-#  command: "kubectl label node  {{hostvars[item]['hostname']}}  ingress=true  --overwrite"
-#  with_items: "{{ groups['ingressnode'] }}"
-#  when: inventory_hostname in groups['master0']
-#
-#
-#
-##### flashcat
-#- name: create ns flashcat
-#  when: inventory_hostname in groups['master0']
-#  shell: "kubectl create ns flashcat --dry-run=client -o yaml | kubectl apply -f - "
-#
-#- name: cp controller-layer-svc.yaml
-#  when: inventory_hostname in groups['master0']
-#  copy:
-#    src: "controller-layer-svc.yaml"
-#    dest: "/home/controller-layer-svc.yaml"
-#
-###8.  apply  controller-layer svc
-#- name: apply controller-layer-svc.yaml
-#  when: inventory_hostname in groups['master0']
-#  command: "kubectl apply -f /home/controller-layer-svc.yaml"
-#
-### metacontroller
-#
-##- name: unarchive metacontroller files
-##  when: inventory_hostname in groups['master0']
-##  unarchive:
-##    src: "metacontroller.tar.gz"
-##    dest:  "/home"
-##
-##- name: apply metacontroller yaml
-##  when: inventory_hostname in groups['master0']
-##  command: " kubectl apply -k  /home/metacontroller/manifests/production/  "
-##
-##- name: apply per pod per svc yaml
-##  when: inventory_hostname in groups['master0']
-##  command: " kubectl apply -k  /home/metacontroller/examples/service-per-pod/manifest/  "
-##
-#- name: template prometheus-additional.yaml
-#  when: inventory_hostname in groups['master0']
-#  template:
-#    src: "prometheus-additional.yaml.j2"
-#    dest: "/home/prometheus-additional.yaml"
-#
-###add flashcat
-#- name: create secret  additional-scrape-configs
-#  when: inventory_hostname in groups['master0']
-#  shell: "kubectl create secret generic additional-scrape-configs --from-file=/home/prometheus-additional.yaml --dry-run=client --output=yaml > /home/additional-scrape-configs.yaml"
-#
-#- name: create ns cattle-monitoring-system
-#  when: inventory_hostname in groups['master0']
-#  shell: "kubectl create ns cattle-monitoring-system --dry-run=client -o yaml | kubectl apply -f - "
-#
-#- name: apply  additional-scrape-configs
-#  when: inventory_hostname in groups['master0']
-#  shell: " kubectl apply -f /home/additional-scrape-configs.yaml -n cattle-monitoring-system"
-#
-#- name: unarchive crd-manifest.tgz crd files
-#  when: inventory_hostname in groups['master0']
-#  unarchive:
-#    src: "crd-manifest.tgz"
-#    dest:  "/home"
-#
-#- name: apply rancher crd yaml
-#  when: inventory_hostname in groups['master0']
-#  shell: " kubectl apply -f /home/charts/crds/"
-#
-#- name: unarchive rancher-monitoring crd files
-#  when: inventory_hostname in groups['master0']
-#  unarchive:
-#    src: "rancher-monitoring.zip"
-#    dest:  "/home"
-#
-#- name: cp monitor-ns.sh
-#  when: inventory_hostname in groups['master0']
-#  copy:
-#    src: "monitor-ns.sh"
-#    dest: "/home/monitor-ns.sh"
-#    mode: 0777
-#
-#- name: del if exists ns cattle-dashboards
-#  when: inventory_hostname in groups['master0']
-#  command: "bash -x /home/monitor-ns.sh"
-#
-#- name: apply rancher monitoring yaml
-#  when: inventory_hostname in groups['master0']
-#  shell: "helm install rancher-monitoring  /home/rancher-monitoring -n cattle-monitoring-system"
-#
-#
-### 15. test ingress
-#- name: cp test-ingress.yaml
-#  when:
-#    - inventory_hostname in groups['master0']
-#  copy:
-#    src: "test-ingress.yaml"
-#    dest: "/home/test-ingress.yaml"
-#
-#### pause 1 min for pod ingress ok
-#- name: wait 1 min for some depends on pod is ok
-#  pause:
-#    minutes: 1
-#
-###8.  apply  ingress
-#- name: apply test-ingress.yaml
-#  when: inventory_hostname in groups['master0']
-#  command: "kubectl apply -f /home/test-ingress.yaml"
-#
-#
-####13. gpu yaml
-#- name: cp gpu.yaml
-#  when: inventory_hostname in groups['master0']
-#  copy:
-#    src: "gpu.yaml"
-#    dest: "/home/gpu.yaml"
-#
-###8.  apply  gpu 依赖servicemonitor
-#- name: apply gpu.yaml
-#  when: inventory_hostname in groups['master0']
-#  command: "kubectl apply -f /home/gpu.yaml"
-#
-##- name: cp cm-writer.yaml
-##  when: inventory_hostname in groups['master0']
-##  template:
-##    src: "cm-writer.yaml.j2"
-##    dest: "/home/cm-writer.yaml"
-##
-####8.  apply  cm-writer
-##- name: apply cm-writer.yaml
-##  when: inventory_hostname in groups['master0']
-##  command: "kubectl apply -f /home/cm-writer.yaml  -n flashcat "
-##
-##- name: cp ds-all.yaml
-##  when: inventory_hostname in groups['master0']
-##  copy:
-##    src: "ds-all.yaml"
-##    dest: "/home/ds-all.yaml"
-##
-####8.  apply  ds-all
-##- name: apply ds-all.yaml
-##  when: inventory_hostname in groups['master0']
-##  command: "kubectl apply -f /home/ds-all.yaml  -n flashcat "
-#
-#- name: template crd.sh
-#  when: inventory_hostname in groups['master0']
-#  template:
-#    src: "updatecrd.sh.j2"
-#    dest: "/home/updatecrd.sh"
-#
-#- name: update crd
-#  when: inventory_hostname in groups['master0']
-#  command: "bash -x /home/updatecrd.sh"
-#
-#- name: template clearlogs.sh
-#  template:
-#    src: "clearlogs.sh.j2"
-#    dest: "/root/clearlogs.sh"
-#    mode: 0777
-#
-#- name:  clear logs
-#  cron:
-#    name: clear logs
-#    minute: "20"
-#    job: "/usr/bin/bash /root/clearlogs.sh"
-#
-#- name: cp ing-realip.sh
-#  when: inventory_hostname in groups['master0']
-#  copy:
-#    src: "ing-realip.sh"
-#    dest: "/home/ing-realip.sh"
-#    mode: 0777
-#
-#- name: exe ing-realip.sh
-#  when: inventory_hostname in groups['master0']
-#  command: "bash -x /home/ing-realip.sh"
-#
-#- name: Set NodePort for the rancher-monitoring-grafana service
-#  when: inventory_hostname in groups['master0']
-#  shell: |
-#    kubectl patch svc rancher-monitoring-grafana -n cattle-monitoring-system --type='json' -p='[{"op": "replace", "path": "/spec/type", "value":"NodePort"}, {"op": "add", "path": "/spec/ports/0/nodePort", "value":31000}]'
-#  register: output
-#- debug: var=output.stdout_lines
-#  when: inventory_hostname in groups['master0']
+- name: Include rancher-monitor.yaml
+  include_tasks: rancher-monitor.yaml
+
+- name: Include metacontroller.yaml
+  include_tasks: metacontroller.yaml
+
+- name: Include gpu.yaml
+  include_tasks: gpu.yaml
+
+- name: Include extra.yaml
+  include_tasks: extra.yaml
+
+- name: Include clear.yaml
+  include_tasks: clear.yaml
+
+

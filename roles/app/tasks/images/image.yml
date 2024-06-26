@@ -1,0 +1,5 @@
+- name: Include base.yml
+  include_tasks: base.yml
+
+- name: Include monitor.yml
+  include_tasks: monitor.yml

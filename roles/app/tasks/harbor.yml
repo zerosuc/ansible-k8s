@@ -3,6 +3,18 @@
 - name: login harbor
   command: "docker login {{master0ip}}:{{harborport}}  -u admin -p {{harbor_pwd}}"
 
+- name: create secret harbor
+  when: inventory_hostname in groups['master0']
+  shell: " kubectl create secret generic harbor \
+    --from-file=.dockerconfigjson=/root/.docker/config.json \
+    --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f -"
+
+- name: create secret 151harbor
+  when: inventory_hostname in groups['master0']
+  shell: " kubectl create secret generic 151harbor \
+    --from-file=.dockerconfigjson=/root/.docker/config.json \
+    --type=kubernetes.io/dockerconfigjson --dry-run=client -o yaml | kubectl apply -f - "
+
 - name: cp harbor.sh.j2
   when: inventory_hostname in groups['master0']
   template:

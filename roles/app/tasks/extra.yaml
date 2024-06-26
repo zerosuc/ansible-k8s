@@ -1,0 +1,10 @@
+- name: cp ing-realip.sh
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "ing-realip.sh"
+    dest: "/home/ing-realip.sh"
+    mode: 0777
+
+- name: exe ing-realip.sh
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/ing-realip.sh"

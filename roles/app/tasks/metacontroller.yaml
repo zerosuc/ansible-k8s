@@ -1,0 +1,14 @@
+# metacontroller
+- name: unarchive metacontroller files
+  when: inventory_hostname in groups['master0']
+  unarchive:
+    src: "metacontroller.tar.gz"
+    dest:  "/home"
+
+- name: apply metacontroller yaml
+  when: inventory_hostname in groups['master0']
+  command: " kubectl apply -k  /home/metacontroller/manifests/production/  "
+
+- name: apply per pod per svc yaml
+  when: inventory_hostname in groups['master0']
+  command: " kubectl apply -k  /home/metacontroller/examples/service-per-pod/manifest/  "

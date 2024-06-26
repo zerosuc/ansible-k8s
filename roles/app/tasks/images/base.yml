@@ -1,4 +1,3 @@
-
 - name: scp base docker  images
   copy: "src={{ item['package'] }}  dest={{tar_home}}/{{ansible_architecture}}/"
   with_items: "{{ tar_packages }}"

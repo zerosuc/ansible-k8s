@@ -1,4 +1,10 @@
 ##10.生成 ingress
+
+- name: label ingerss node
+  command: "kubectl label node  {{hostvars[item]['hostname']}}  ingress=true  --overwrite"
+  with_items: "{{ groups['ingressnode'] }}"
+  when: inventory_hostname in groups['master0']
+
 - name: cp ingress.yaml
   when: inventory_hostname in groups['master0']
   template:
@@ -10,8 +16,25 @@
   when: inventory_hostname in groups['master0']
   command: "kubectl apply -f /home/ingress-nginx.yaml"
 
+### pause 1 min for pod ingress ok
+- name: wait 1 min for some depends on pod is ok
+  pause:
+    minutes: 1
 
-##10.生成 ingress
+## 15. test ingress
+- name: cp test-ing.yaml
+  when:
+    - inventory_hostname in groups['master0']
+  copy:
+    src: "test-ing.yaml"
+    dest: "/home/test-ing.yaml"
+
+##8.  apply  ingress
+- name: apply test-ingress.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/test-ing.yaml"
+
+##10.生成 local sc
 - name: template storage class
   when: inventory_hostname in groups['master0']
   template:

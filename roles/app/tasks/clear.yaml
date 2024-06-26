@@ -1,0 +1,11 @@
+- name: template clearlogs.sh
+  template:
+    src: "clearlogs.sh.j2"
+    dest: "/root/clearlogs.sh"
+    mode: 0777
+
+- name:  clear logs
+  cron:
+    name: clear logs
+    minute: "20"
+    job: "/usr/bin/bash /root/clearlogs.sh"

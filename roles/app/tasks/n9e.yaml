@@ -1,0 +1,58 @@
+##### flashcat
+- name: create ns flashcat
+  when: inventory_hostname in groups['master0']
+  shell: "kubectl create ns flashcat --dry-run=client -o yaml | kubectl apply -f - "
+
+- name: cp controller-layer-svc.yaml
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "controller-layer-svc.yaml"
+    dest: "/home/controller-layer-svc.yaml"
+
+##8.  apply  controller-layer svc
+- name: apply controller-layer-svc.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/controller-layer-svc.yaml"
+
+- name: template prometheus-additional.yaml
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "prometheus-additional.yaml.j2"
+    dest: "/home/prometheus-additional.yaml"
+
+##add flashcat
+- name: create secret  additional-scrape-configs
+  when: inventory_hostname in groups['master0']
+  shell: "kubectl create secret generic additional-scrape-configs --from-file=/home/prometheus-additional.yaml --dry-run=client --output=yaml > /home/additional-scrape-configs.yaml"
+
+- name: cp cm-writer.yaml
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "cm-writer.yaml.j2"
+    dest: "/home/cm-writer.yaml"
+
+##8.  apply  cm-writer
+- name: apply cm-writer.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/cm-writer.yaml  -n flashcat "
+
+- name: cp ds-all.yaml
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "ds-all.yaml"
+    dest: "/home/ds-all.yaml"
+
+##8.  apply  ds-all
+- name: apply ds-all.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/ds-all.yaml  -n flashcat "
+
+- name: template crd.sh
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "updatecrd.sh.j2"
+    dest: "/home/updatecrd.sh"
+
+- name: update crd
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/updatecrd.sh"

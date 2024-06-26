@@ -1,0 +1,16 @@
+- name: label gpu node
+  command: "kubectl label node  {{hostvars[item]['hostname']}}  nvidia.com/gpu.present=true  --overwrite"
+  with_items: "{{ groups['labelgpu'] }}"
+  when: inventory_hostname in groups['master0']
+
+####13. gpu yaml
+- name: cp gpu.yaml
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "gpu.yaml"
+    dest: "/home/gpu.yaml"
+
+##8.  apply  gpu 依赖servicemonitor
+- name: apply gpu.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/gpu.yaml"

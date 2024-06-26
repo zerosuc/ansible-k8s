@@ -1,0 +1,46 @@
+- name: create ns cattle-monitoring-system
+  when: inventory_hostname in groups['master0']
+  shell: "kubectl create ns cattle-monitoring-system --dry-run=client -o yaml | kubectl apply -f - "
+
+- name: apply  additional-scrape-configs
+  when: inventory_hostname in groups['master0']
+  shell: " kubectl apply -f /home/additional-scrape-configs.yaml -n cattle-monitoring-system"
+
+- name: unarchive crd-manifest.tgz crd files
+  when: inventory_hostname in groups['master0']
+  unarchive:
+    src: "crd-manifest.tgz"
+    dest:  "/home"
+
+- name: apply rancher crd yaml
+  when: inventory_hostname in groups['master0']
+  shell: " kubectl apply -f /home/charts/crds/"
+
+- name: unarchive rancher-monitoring crd files
+  when: inventory_hostname in groups['master0']
+  unarchive:
+    src: "rancher-monitoring.zip"
+    dest:  "/home"
+
+- name: cp monitor-ns.sh
+  when: inventory_hostname in groups['master0']
+  copy:
+    src: "monitor-ns.sh"
+    dest: "/home/monitor-ns.sh"
+    mode: 0777
+
+- name: del if exists ns cattle-dashboards
+  when: inventory_hostname in groups['master0']
+  command: "bash -x /home/monitor-ns.sh"
+
+- name: apply rancher monitoring yaml
+  when: inventory_hostname in groups['master0']
+  shell: "helm install rancher-monitoring  /home/rancher-monitoring -n cattle-monitoring-system"
+
+- name: Set NodePort for the rancher-monitoring-grafana service
+  when: inventory_hostname in groups['master0']
+  shell: |
+    kubectl patch svc rancher-monitoring-grafana -n cattle-monitoring-system --type='json' -p='[{"op": "replace", "path": "/spec/type", "value":"NodePort"}, {"op": "add", "path": "/spec/ports/0/nodePort", "value":31000}]'
+  register: output
+- debug: var=output.stdout_lines
+  when: inventory_hostname in groups['master0']
