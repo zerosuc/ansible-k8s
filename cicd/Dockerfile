@@ -1,11 +1,8 @@
-FROM jenkins/jnlp-slave:latest
-MAINTAINER wanminny@163.com
-
-# 切换到 root 账户进行操作
+FROM jenkins/jnlp-slave:latest-jdk11
 USER root
-
 # 安装 maven
 COPY apache-maven-3.6.2-bin.tar.gz .
+
 RUN tar -zxf apache-maven-3.6.2-bin.tar.gz && \
     mv apache-maven-3.6.2 /usr/local && \
     rm -f apache-maven-3.6.2-bin.tar.gz && \
@@ -25,4 +22,4 @@ RUN chmod +x /usr/local/bin/docker*
 COPY settings.xml /usr/local/apache-maven/conf/settings.xml
 
 # 切换回 jenkins 用户
-#USER jenkins
+USER jenkins

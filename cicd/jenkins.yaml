@@ -2,71 +2,93 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kube-ops
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: jenkins-pvc
-  namespace: kube-ops
-spec:
-  storageClassName: nfs # 指定一个可用的 storageclass
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
+  name: jenkins
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: jenkins
-  namespace: kube-ops
+  namespace: jenkins
 ---
-kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
   name: jenkins
 rules:
-  - apiGroups: ["extensions", "apps"]
-    resources: ["deployments", "ingresses"]
-    verbs: ["create", "delete", "get", "list", "watch", "patch", "update"]
-  - apiGroups: [""]
-    resources: ["services"]
-    verbs: ["create", "delete", "get", "list", "watch", "patch", "update"]
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
-  - apiGroups: [""]
-    resources: ["pods/exec"]
-    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
-  - apiGroups: [""]
-    resources: ["pods/log", "events"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get"]
+  - apiGroups:
+      - '*'
+    resources:
+      - statefulsets
+      - services
+      - replicationcontrollers
+      - replicasets
+      - podtemplates
+      - podsecuritypolicies
+      - pods
+      - pods/log
+      - pods/exec
+      - podpreset
+      - poddisruptionbudget
+      - persistentvolumes
+      - persistentvolumeclaims
+      - jobs
+      - endpoints
+      - deployments
+      - deployments/scale
+      - daemonsets
+      - cronjobs
+      - configmaps
+      - namespaces
+      - events
+      - secrets
+    verbs:
+      - create
+      - get
+      - watch
+      - delete
+      - list
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+      - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
   name: jenkins
-  namespace: kube-ops
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: jenkins
 subjects:
-  - kind: ServiceAccount
-    name: jenkins
-    namespace: kube-ops
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: system:serviceaccounts:jenkins
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: jenkins
-  namespace: kube-ops
+  namespace: jenkins
+  labels:
+    app: jenkins
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: jenkins
@@ -75,23 +97,9 @@ spec:
       labels:
         app: jenkins
     spec:
-      serviceAccount: jenkins
-      initContainers:
-        - name: fix-permissions
-          image: busybox:1.35.0
-          command: ["sh", "-c", "chown -R 1000:1000 /var/jenkins_home"]
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - name: jenkinshome
-              mountPath: /var/jenkins_home
       containers:
         - name: jenkins
-          image: jenkins/jenkins:2.402
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: JAVA_OPTS
-              value: -Dhudson.model.DownloadService.noSignatureCheck=true
+          image: jenkins/jenkins:2.412  # 自定义镜像，后面有介绍
           ports:
             - containerPort: 8080
               name: web
@@ -99,38 +107,45 @@ spec:
             - containerPort: 50000
               name: agent
               protocol: TCP
-          resources:
-            limits:
-              cpu: 1500m
-              memory: 6000Mi
-            requests:
-              cpu: 1500m
-              memory: 6000Mi
-          readinessProbe:
-            httpGet:
-              path: /login
-              port: 8080
-            initialDelaySeconds: 60
-            timeoutSeconds: 5
-            failureThreshold: 12
+          env:
+            - name: LIMITS_MEMORY
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+                  divisor: 1Mi
+            - name: JAVA_OPTS
+              value: -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=true
           volumeMounts:
-            - name: jenkinshome
+            - name: jenkins-home
               mountPath: /var/jenkins_home
       volumes:
-        - name: jenkinshome
+        - name: jenkins-home
           persistentVolumeClaim:
-            claimName: jenkins-pvc
+            claimName: jenkins-home
+---
+apiVersion: v1
+kind:  PersistentVolumeClaim
+metadata:
+  name: jenkins-home
+  namespace: jenkins
+spec:
+  storageClassName: nfs
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: jenkins
-  namespace: kube-ops
+  namespace: jenkins
   labels:
     app: jenkins
 spec:
   selector:
     app: jenkins
+  type: NodePort
   ports:
     - name: web
       port: 8080
@@ -143,7 +158,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: jenkins
-  namespace: kube-ops
+  namespace: jenkins
 spec:
   rules:
     - host: jenkins.k8s.local
