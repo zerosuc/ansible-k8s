@@ -534,6 +534,8 @@ spec:
         app.kubernetes.io/version: 1.3.1
       name: ingress-nginx-admission-create
     spec:
+      imagePullSecrets:
+        - name: registry-credentials  # 使用创建的 secret
       containers:
       - args:
         - create
