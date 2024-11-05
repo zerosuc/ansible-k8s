@@ -416,6 +416,8 @@ spec:
         app.kubernetes.io/instance: ingress-nginx
         app.kubernetes.io/name: ingress-nginx
     spec:
+      imagePullSecrets:
+      - name: registry-credentials
       containers:
       - args:
         - /nginx-ingress-controller

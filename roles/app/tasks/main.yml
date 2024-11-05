@@ -9,8 +9,8 @@
 - name: Include images/image.yml
   include_tasks: images/image.yml
 
-- name: Include app.yml
-  include_tasks: app.yml
+#- name: Include app.yml
+#  include_tasks: app.yml
 
 - name: Include harbor.yml
   include_tasks: harbor.yml
@@ -33,7 +33,5 @@
 - name: Include extra.yaml
   include_tasks: extra.yaml
 
-- name: Include clear.yaml
-  include_tasks: clear.yaml
 
 

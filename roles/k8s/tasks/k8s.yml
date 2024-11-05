@@ -28,14 +28,36 @@
     sealos_version: "{{ sealos_release.json.tag_name | regex_replace('^v', '') }}"
   when: inventory_hostname in groups['master0']
 
-- name: Download Sealos binary if not already installed or version is outdated
+- name: Check if Sealos is already installed
+  stat:
+    path: /usr/bin/sealos
+  register: sealos_installed
+  when: inventory_hostname in groups['master0']
+
+- name: Check the installed Sealos version
+  command: sealos version
+  register: installed_version
+  changed_when: false
+  when:
+    - inventory_hostname in groups['master0']
+    - sealos_installed.stat.exists
+
+- name: Set Sealos installed version fact
+  set_fact:
+    installed_sealos_version: "{{ installed_version.stdout | regex_search('([0-9.]+)') }}"
+  when:
+    - inventory_hostname in groups['master0']
+    - sealos_installed.stat.exists
+    - installed_version.stdout is defined
+
+- name: Download Sealos binary if not installed or version is outdated
   get_url:
     url: "https://mirror.ghproxy.com/https://github.com/labring/sealos/releases/download/v{{ sealos_version }}/sealos_{{ sealos_version }}_linux_amd64.tar.gz"
     dest: /tmp/sealos_{{ sealos_version }}_linux_amd64.tar.gz
     mode: '0755'
   when:
     - inventory_hostname in groups['master0']
-    - sealos_version != (ansible_local.sealos.version | default(''))
+    - (not sealos_installed.stat.exists)
 
 - name: Extract and install Sealos binary
   unarchive:
@@ -45,11 +67,11 @@
     creates: /usr/bin/sealos
   when:
     - inventory_hostname in groups['master0']
-    - sealos_version != (ansible_local.sealos.version | default(''))
+    - (not sealos_installed.stat.exists or sealos_version != installed_sealos_version)
 
 - name: Verify Sealos installation
   command: sealos version
-  register: sealos_installed
+  register: sealos_installed_version
   changed_when: false
   check_mode: false
   when: inventory_hostname in groups['master0']
@@ -59,11 +81,12 @@
     dest: /etc/ansible/facts.d/sealos.fact
     content: |
       {
-        "version": "{{ sealos_installed.stdout | regex_search('([0-9.]+)') }}"
+        "version": "{{ sealos_installed_version.stdout | regex_search('([0-9.]+)') }}"
       }
   when:
     - inventory_hostname in groups['master0']
-    - sealos_installed.stdout is defined
+    - sealos_installed_version.stdout is defined
+
 
 
 # 0. scp sealos to env
@@ -254,9 +277,13 @@
     enabled: yes
 
 ### pause 1 min for pod ingress ok
-- name: wait 1 min for k8s system pod is ok
+#- name: wait 1 min for k8s system pod is ok
+#  pause:
+#    minutes: 1
+
+- name: wait 30 seconds for k8s system pod is ok
   pause:
-    minutes: 1
+    seconds: 30
 
 #- name: scp flannel docker  images
 #  copy: "src=flannel.{{ansible_architecture}}.tar  dest=/home"
@@ -266,17 +293,6 @@
 #  command: "docker load -i /home/flannel.{{ansible_architecture}}.tar"
 ##  when: inventory_hostname in groups['master0']
 
-##. 生成flannel
-- name: cp flannel.yaml.j2
-  when: inventory_hostname in groups['master0']
-  template:
-    src: "flannel.yaml.j2"
-    dest: "/home/flannel.yaml"
-
-##. 生成harbor pull image policy
-- name: apply flannel
-  when: inventory_hostname in groups['master0']
-  command: "kubectl apply -f /home/flannel.yaml"
 
 #- name: Docker proxy tag
 #  command: docker tag sealos.hub:5000/kube-proxy:v1.21.8 k8s.gcr.io/kube-proxy:v1.21.8

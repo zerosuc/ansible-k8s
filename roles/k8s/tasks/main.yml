@@ -1,9 +1,12 @@
 ---
-- name: Include k8s.yml
-  include_tasks: k8s.yml
+#- name: Include k8s.yml
+#  include_tasks: k8s.yml
+#
+#- name: Include flannel.yml
+#  include_tasks: flannel.yml
 
-- name: Include ingress-nginx.yml
-  include_tasks: ingress-nginx.yml
+#- name: Include ingress-nginx.yml
+#  include_tasks: ingress-nginx.yml
 
 - name: Include local-sc.yml
   include_tasks: local-sc.yml
@@ -11,3 +14,5 @@
 - name: Include metrics-server.yml
   include_tasks: metrics-server.yml
 
+- name: Include clear.yaml
+  include_tasks: clear.yaml

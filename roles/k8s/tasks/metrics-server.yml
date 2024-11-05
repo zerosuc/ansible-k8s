@@ -1,10 +1,10 @@
 - name: cp metrics-server.yaml
   when: inventory_hostname in groups['master0']
-  copy:
-    src: "metrics-server.yaml"
-    dest: "/home/metrics-server.yaml"
+  template:
+    src: "metric-server.yaml.j2"
+    dest: "/home/metric-server.yaml"
 
 ##8.  apply  local sc
 - name: apply metrics-server.yaml
   when: inventory_hostname in groups['master0']
-  command: "kubectl apply -f /home/metrics-server.yaml"
+  command: "kubectl apply -f /home/metric-server.yaml"
