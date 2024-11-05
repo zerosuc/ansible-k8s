@@ -421,6 +421,7 @@ spec:
       containers:
       - args:
         - /nginx-ingress-controller
+        - --report-node-internal-ip-address
         - --election-id=ingress-controller-leader
         - --controller-class=k8s.io/ingress-nginx
         - --ingress-class=nginx
@@ -429,7 +430,6 @@ spec:
         - --validating-webhook-certificate=/usr/local/certificates/cert
         - --validating-webhook-key=/usr/local/certificates/key
         - --watch-ingress-without-class=true
-        - --publish-status-address=localhost
         env:
         - name: POD_NAME
           valueFrom:
@@ -498,6 +498,8 @@ spec:
           name: webhook-cert
           readOnly: true
       dnsPolicy: ClusterFirst
+      nodeSelector:
+        ingress: "true"
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 0
       tolerations:

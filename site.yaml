@@ -1,24 +1,24 @@
 ---
-#- hosts: all
-#  pre_tasks:
-#    - name: Check if Python 3 is available
-#      command: which python3
-#      register: python3
-#      ignore_errors: true
-#
-#    - name: Set fact for Python interpreter
-#      set_fact:
-#        ansible_python_interpreter: "{{ python3.stdout }}"
-#      when: python3.stdout != ""
-#
-#    - name: Fallback to Python 2 if necessary
-#      set_fact:
-#        ansible_python_interpreter: /usr/bin/python
-#      when: python3.stdout == ""
-#  any_errors_fatal: true
-#  remote_user: root
-#  roles:
-#    - base
+- hosts: all
+  pre_tasks:
+    - name: Check if Python 3 is available
+      command: which python3
+      register: python3
+      ignore_errors: true
+
+    - name: Set fact for Python interpreter
+      set_fact:
+        ansible_python_interpreter: "{{ python3.stdout }}"
+      when: python3.stdout != ""
+
+    - name: Fallback to Python 2 if necessary
+      set_fact:
+        ansible_python_interpreter: /usr/bin/python
+      when: python3.stdout == ""
+  any_errors_fatal: true
+  remote_user: root
+  roles:
+    - base
 
 - hosts: k8s
   any_errors_fatal: true

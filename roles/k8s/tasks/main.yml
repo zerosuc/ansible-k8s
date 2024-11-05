@@ -1,6 +1,6 @@
 ---
-#- name: Include k8s.yml
-#  include_tasks: k8s.yml
+- name: Include k8s.yml
+  include_tasks: k8s.yml
 
 - name: Include flannel.yml
   include_tasks: flannel.yml

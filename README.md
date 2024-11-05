@@ -110,6 +110,6 @@
 
 
 ## new
->  1. apt install ansible   -y
+>  1. apt install ansible lrzsz  -y
 >  2. apt install sshpass   -y 
 >  3. kubectl create secret docker-registry registry-credentials   --docker-server=registry.cn-hangzhou.aliyuncs.com   --docker-username=wanminny@163.com   --docker-password=xxxx -n ingress-nginx 
