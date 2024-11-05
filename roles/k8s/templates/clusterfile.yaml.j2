@@ -22,8 +22,8 @@ spec:
       - node
       - amd64
   image:
-    - labring/kubernetes-docker:v1.21.8
-    - labring/helm:v3.10.0
+    - dockerpull.org/labring/kubernetes-docker:v1.23.8
+    - dockerpull.org/labring/helm:v3.10.0
   ssh:
     passwd: {{ ansible_ssh_pass }}
     pk: /root/.ssh/id_rsa

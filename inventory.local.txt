@@ -27,6 +27,7 @@ harborlogsdir="{{data_dir}}/harbor/logs"
 n9e_home="{{data_dir}}/n9e-home"
 tar_home="{{data_dir}}/tar-home"
 harbor_pwd="Harbor12345"
+docker_proxy="dockerpull.org"
 
 ###是否开启防火墙
 enable_firewall="no"

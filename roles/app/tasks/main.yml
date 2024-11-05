@@ -24,8 +24,8 @@
 - name: Include rancher-monitor.yaml
   include_tasks: rancher-monitor.yaml
 
-- name: Include metacontroller.yaml
-  include_tasks: metacontroller.yaml
+#- name: Include metacontroller.yaml
+#  include_tasks: metacontroller.yaml
 
 - name: Include gpu.yaml
   include_tasks: gpu.yaml

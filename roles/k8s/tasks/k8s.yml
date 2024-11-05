@@ -7,29 +7,88 @@
   when:
     - ansible_distribution is search("Kylin")
 
-# 0. scp sealos to env
-- name: set sealos to env
-  copy: "src=sealos-{{ansible_architecture}} dest=/usr/bin/sealos"
-#  when: inventory_hostname in groups['master0']
+- name: Create /etc/ansible/facts.d directory if it does not exist
+  file:
+    path: /etc/ansible/facts.d
+    state: directory
+    mode: '0755'
+  when: inventory_hostname in groups['master0']
 
-- name: chmod sealos file
-  command: "chmod 777 /usr/bin/sealos"
-#  when: inventory_hostname in groups['master0']
+- name: Fetch the latest Sealos version tag from GitHub
+  uri:
+    url: https://api.github.com/repos/labring/sealos/releases/latest
+    method: GET
+    return_content: yes
+  register: sealos_release
+  changed_when: false
+  when: inventory_hostname in groups['master0']
+
+- name: Set Sealos version variable
+  set_fact:
+    sealos_version: "{{ sealos_release.json.tag_name | regex_replace('^v', '') }}"
+  when: inventory_hostname in groups['master0']
+
+- name: Download Sealos binary if not already installed or version is outdated
+  get_url:
+    url: "https://mirror.ghproxy.com/https://github.com/labring/sealos/releases/download/v{{ sealos_version }}/sealos_{{ sealos_version }}_linux_amd64.tar.gz"
+    dest: /tmp/sealos_{{ sealos_version }}_linux_amd64.tar.gz
+    mode: '0755'
+  when:
+    - inventory_hostname in groups['master0']
+    - sealos_version != (ansible_local.sealos.version | default(''))
+
+- name: Extract and install Sealos binary
+  unarchive:
+    src: /tmp/sealos_{{ sealos_version }}_linux_amd64.tar.gz
+    dest: /usr/bin/
+    remote_src: yes
+    creates: /usr/bin/sealos
+  when:
+    - inventory_hostname in groups['master0']
+    - sealos_version != (ansible_local.sealos.version | default(''))
+
+- name: Verify Sealos installation
+  command: sealos version
+  register: sealos_installed
+  changed_when: false
+  check_mode: false
+  when: inventory_hostname in groups['master0']
+
+- name: Set local facts for Sealos version
+  copy:
+    dest: /etc/ansible/facts.d/sealos.fact
+    content: |
+      {
+        "version": "{{ sealos_installed.stdout | regex_search('([0-9.]+)') }}"
+      }
+  when:
+    - inventory_hostname in groups['master0']
+    - sealos_installed.stdout is defined
+
+
+# 0. scp sealos to env
+#- name: set sealos to env
+#  copy: "src=sealos-{{ansible_architecture}} dest=/usr/bin/sealos"
+##  when: inventory_hostname in groups['master0']
+#
+#- name: chmod sealos file
+#  command: "chmod 777 /usr/bin/sealos"
+##  when: inventory_hostname in groups['master0']
 
 # 1. load sealos images
-- name: scp sealos images
-  copy: "src={{ item }} dest={{work_home}}/{{ item }}"
-  with_items:
-    - "kubernetes-docker.v1.21.8.{{ansible_architecture}}.tar.gz"
-    - "helm.v3.10.0.{{ansible_architecture}}.tar"
-#  when: inventory_hostname in groups['master0']
-
-- name: load sealos packages
-  command: "sealos  load -i {{work_home}}/{{ item }}"
-  with_items:
-    - "kubernetes-docker.v1.21.8.{{ansible_architecture}}.tar.gz"
-    - "helm.v3.10.0.{{ansible_architecture}}.tar"
-#  when: inventory_hostname in groups['master0']
+#- name: scp sealos images
+#  copy: "src={{ item }} dest={{work_home}}/{{ item }}"
+#  with_items:
+#    - "kubernetes-docker.v1.21.8.{{ansible_architecture}}.tar.gz"
+#    - "helm.v3.10.0.{{ansible_architecture}}.tar"
+##  when: inventory_hostname in groups['master0']
+#
+#- name: load sealos packages
+#  command: "sealos  load -i {{work_home}}/{{ item }}"
+#  with_items:
+#    - "kubernetes-docker.v1.21.8.{{ansible_architecture}}.tar.gz"
+#    - "helm.v3.10.0.{{ansible_architecture}}.tar"
+##  when: inventory_hostname in groups['master0']
 
 # 2. config clusterfile and install k8s
 - name: scp sealos clusterfile
@@ -38,15 +97,37 @@
     dest: /home/clusterfile.yaml
   when: inventory_hostname in groups['master0']
 
-- name: install k8s
+- name: Check if Kubernetes cluster is already installed
+  command: "kubectl get nodes --no-headers"
+  register: k8s_installed_check
+  ignore_errors: true
+  changed_when: false
   when: inventory_hostname in groups['master0']
-  command: "sealos apply -f /home/clusterfile.yaml"
-  register: k8s_result # register指令把执行结果寄存到自定义变量中
 
-- name: echo k8s_result
-  when: inventory_hostname in groups['master0']
+
+- name: Install k8s if not already installed
+  command: "sealos apply -f /home/clusterfile.yaml"
+  when:
+    - inventory_hostname in groups['master0']
+    - k8s_installed_check.rc != 0
+  register: k8s_result
+
+- name: Print installation result
+  when:
+    - inventory_hostname in groups['master0']
+    - k8s_result is defined
   debug:
-    msg: "{{k8s_result}}"  # 打印变量
+    msg: "{{ k8s_result }}"
+
+#- name: install k8s
+#  when: inventory_hostname in groups['master0']
+#  command: "sealos apply -f /home/clusterfile.yaml"
+#  register: k8s_result # register指令把执行结果寄存到自定义变量中
+#
+#- name: echo k8s_result
+#  when: inventory_hostname in groups['master0']
+#  debug:
+#    msg: "{{k8s_result}}"  # 打印变量
 
 ### pause 30 seconds
 - name: wait 30 seconds for k8s
@@ -177,13 +258,13 @@
   pause:
     minutes: 1
 
-- name: scp flannel docker  images
-  copy: "src=flannel.{{ansible_architecture}}.tar  dest=/home"
-#  when: inventory_hostname in groups['master0']
-
-- name: load flannel docker images
-  command: "docker load -i /home/flannel.{{ansible_architecture}}.tar"
-#  when: inventory_hostname in groups['master0']
+#- name: scp flannel docker  images
+#  copy: "src=flannel.{{ansible_architecture}}.tar  dest=/home"
+##  when: inventory_hostname in groups['master0']
+#
+#- name: load flannel docker images
+#  command: "docker load -i /home/flannel.{{ansible_architecture}}.tar"
+##  when: inventory_hostname in groups['master0']
 
 ##. 生成flannel
 - name: cp flannel.yaml.j2
@@ -197,6 +278,6 @@
   when: inventory_hostname in groups['master0']
   command: "kubectl apply -f /home/flannel.yaml"
 
-- name: Docker proxy tag
-  command: docker tag sealos.hub:5000/kube-proxy:v1.21.8 k8s.gcr.io/kube-proxy:v1.21.8
-  when: inventory_hostname not in groups['master0']
+#- name: Docker proxy tag
+#  command: docker tag sealos.hub:5000/kube-proxy:v1.21.8 k8s.gcr.io/kube-proxy:v1.21.8
+#  when: inventory_hostname not in groups['master0']
