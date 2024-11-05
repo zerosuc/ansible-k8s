@@ -49,10 +49,18 @@
   when:
     - ansible_distribution == "Ubuntu"
 
-- name: Install unzip .deb packages
-  shell: dpkg -i {{work_home}}/unzip.{{ansible_architecture}}.deb  # 执行dpkg命令安装deb包
-  args:
-    executable: /bin/bash
+#- name: Install unzip .deb packages
+#  shell: dpkg -i {{work_home}}/unzip.{{ansible_architecture}}.deb  # 执行dpkg命令安装deb包
+#  args:
+#    executable: /bin/bash
+#  register: apt_output
+#  when:
+#    - ansible_distribution == "Ubuntu"
+
+- name: Install unzip package using apt
+  apt:
+    name: unzip
+    state: present  # 确保安装 unzip
   register: apt_output
   when:
     - ansible_distribution == "Ubuntu"

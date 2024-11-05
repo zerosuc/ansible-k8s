@@ -6,7 +6,7 @@ ansible_ssh_user=root
 ansible_ssh_port=22
 ansible_ssh_pass=u1
 
-master0ip=192.168.2.74
+master0ip=192.168.2.78
 
 ## 如果现场没有ntp服务器,使能本地 enable_local_ntp_server 服务器为yes
 ## 默认是需要有远程ntp-server的;所以默认为no
@@ -14,7 +14,7 @@ enable_local_ntp_server=no
 ## 远程真实ntp地址 enable_local_ntp_server="no"才填
 ntpip=182.92.12.11
 
-harborip=192.168.2.74
+harborip=192.168.2.78
 harborport=8081
 podcidr="172.19.0.0/16"
 svccidr="172.20.0.0/16"
@@ -38,14 +38,14 @@ enable_nfs_local="yes"
 
 ##本地nfs地址和挂载路径;enable_nfs_local="yes"的时候才生效
 [nfsserver-local]
-192.168.2.74
+192.168.2.78
 [nfsserver-local:vars]
-nfs_server=192.168.2.74
+nfs_server=192.168.2.78
 nfs_db_path=/data/nfs
 
 [all]
-192.168.2.74 hostname=k8s.master-00.local
-192.168.2.75 hostname=k8s.node-00.local
+192.168.2.78 hostname=k8s.master-00.local
+192.168.2.77 hostname=k8s.node-00.local
 
 [k8s:children]
 master
@@ -53,29 +53,30 @@ node
 
 [master]
 ## 所有的master节点
-192.168.2.74
+192.168.2.78
 
 [node]
 ### 所有的非master节点
-192.168.2.75
+192.168.2.77
 
 
 [master0]
 #only master0
-192.168.2.74
+192.168.2.78
 
 [labelgpu]
 ## for all gpu node
 
 [ingressnode]
 ## 你要设置ingress的node
-192.168.2.74
+192.168.2.78
 
 [pushgwnode]
 ## pushgw部署的节点
-192.168.2.74
+192.168.2.78
 
 
 [nongpu]
 ### 包括所有的非gpu节点,如果master是非gpu也必须填入
-192.168.2.74
+192.168.2.78
+192.168.2.77

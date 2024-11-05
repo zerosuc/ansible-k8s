@@ -10,12 +10,24 @@
   when: inventory_hostname in groups['master0']
   command: "kubectl apply -f /home/flannel.yaml"
 
+- name: Ensure /opt/cni/bin directory exists
+  file:
+    path: /opt/cni/bin
+    state: directory
+    mode: '0755'
+
+- name: Copy CNI plugin tarball to remote host
+  copy:
+    src: cni-plugins-linux-amd64-v1.5.1.tgz  # 本地路径
+    dest: /tmp/cni-plugins-linux-amd64-v1.5.1.tgz  # 远程目标路径
+
 - name: Extract CNI plugins to /opt/cni/bin
   unarchive:
-    src: cni-plugins-linux-amd64-v1.5.1.tgz
+    src: /tmp/cni-plugins-linux-amd64-v1.5.1.tgz  # 使用远程路径
     dest: /opt/cni/bin/
     remote_src: yes
-    creates: /opt/cni/bin/
+    creates: /opt/cni/bin/cni-plugins-linux-amd64-v1.5.1  # 或根据解压后的文件修改
   when: inventory_hostname in groups['k8s']
+
 
 

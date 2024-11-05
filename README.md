@@ -107,3 +107,9 @@
 5> 去掉 rancher模块， n9e模块，categraf模块；
 
 6> 监控地址是: master或者node ip:31000
+
+
+## new
+>  1. apt install ansible   -y
+>  2. apt install sshpass   -y 
+>  3. kubectl create secret docker-registry registry-credentials   --docker-server=registry.cn-hangzhou.aliyuncs.com   --docker-username=wanminny@163.com   --docker-password=xxxx -n ingress-nginx 
