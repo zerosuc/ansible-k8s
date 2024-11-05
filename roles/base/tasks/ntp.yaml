@@ -51,28 +51,28 @@
     - inventory_hostname in groups['master0']
     - ansible_distribution == "CentOS" or ansible_distribution is search("Kylin") or ansible_distribution == "openEuler"
 
-- name: Check if systemd-timesyncd package is installed
-  stat:
-    path: /usr/lib/systemd/systemd-timesyncd
-  register: timesyncd_installed
-  when: ansible_distribution == "Ubuntu"
+#- name: Check if systemd-timesyncd package is installed
+#  stat:
+#    path: /usr/lib/systemd/systemd-timesyncd
+#  register: timesyncd_installed
+#  when: ansible_distribution == "Ubuntu"
+#
+#- name: Stop systemd-timesyncd service
+#  systemd:
+#    name: systemd-timesyncd
+#    state: stopped
+#  ignore_errors: yes
+#  when:
+#  - ansible_distribution == "Ubuntu"
+#  - timesyncd_installed.stat.exists
 
-- name: Stop systemd-timesyncd service
-  systemd:
-    name: systemd-timesyncd
-    state: stopped
-  ignore_errors: yes
-  when:
-  - ansible_distribution == "Ubuntu"
-  - timesyncd_installed.stat.exists
-
-- name: Disable systemd-timesyncd service
-  systemd:
-    name: systemd-timesyncd
-    enabled: no
-  when:
-  - ansible_distribution == "Ubuntu"
-  - timesyncd_installed.stat.exists
+#- name: Disable systemd-timesyncd service
+#  systemd:
+#    name: systemd-timesyncd
+#    enabled: no
+#  when:
+#  - ansible_distribution == "Ubuntu"
+#  - timesyncd_installed.stat.exists
 
 - name: Fix broken dependencies using apt
   command:
@@ -80,50 +80,50 @@
   when:
     - ansible_distribution == "Ubuntu"
 
-- name: Uninstall systemd-timesyncd package
-  apt:
-    name: systemd-timesyncd
-    state: absent
-#  ignore_errors: yes
-  when:
-    - ansible_distribution == "Ubuntu"
-    - timesyncd_installed.stat.exists
+#- name: Uninstall systemd-timesyncd package
+#  apt:
+#    name: systemd-timesyncd
+#    state: absent
+##  ignore_errors: yes
+#  when:
+#    - ansible_distribution == "Ubuntu"
+#    - timesyncd_installed.stat.exists
 
 
-- name: Copy ntp .deb packages to target host for unarchive
-  unarchive:
-    src: "ntpd.deb.{{ansible_architecture}}.tar.gz"
-    dest: "{{work_home}}/"
-    mode: 0755
-  when:
-    - ansible_distribution == "Ubuntu"
-    - inventory_hostname in groups['k8s']
-
-- name: Install ntp deb packages
-  shell: dpkg -i {{work_home}}/ntpd/*.deb  # 执行dpkg命令安装deb包
-  args:
-    executable: /bin/bash
-  register: apt_output
-  ignore_errors: true # 可以暂时忽略
-  when:
-    - inventory_hostname  in groups['k8s']
-    - ansible_distribution == "Ubuntu"
-
-- name: Display ntp apt output
-  debug:
-    msg: "{{apt_output}}"
-  when:
-    - inventory_hostname  in groups['k8s']
-    - ansible_distribution == "Ubuntu"
-
-- name: Stop NTP service on Ubuntu
-  service:
-    name: ntp  # Ubuntu上的service名称是ntp
-    state: stopped
-    enabled: no
-  when:
-    - inventory_hostname in groups['k8s']
-    - ansible_distribution == "Ubuntu"
+#- name: Copy ntp .deb packages to target host for unarchive
+#  unarchive:
+#    src: "ntpd.deb.{{ansible_architecture}}.tar.gz"
+#    dest: "{{work_home}}/"
+#    mode: 0755
+#  when:
+#    - ansible_distribution == "Ubuntu"
+#    - inventory_hostname in groups['k8s']
+#
+#- name: Install ntp deb packages
+#  shell: dpkg -i {{work_home}}/ntpd/*.deb  # 执行dpkg命令安装deb包
+#  args:
+#    executable: /bin/bash
+#  register: apt_output
+#  ignore_errors: true # 可以暂时忽略
+#  when:
+#    - inventory_hostname  in groups['k8s']
+#    - ansible_distribution == "Ubuntu"
+#
+#- name: Display ntp apt output
+#  debug:
+#    msg: "{{apt_output}}"
+#  when:
+#    - inventory_hostname  in groups['k8s']
+#    - ansible_distribution == "Ubuntu"
+#
+#- name: Stop NTP service on Ubuntu
+#  service:
+#    name: ntp  # Ubuntu上的service名称是ntp
+#    state: stopped
+#    enabled: no
+#  when:
+#    - inventory_hostname in groups['k8s']
+#    - ansible_distribution == "Ubuntu"
 
 - name: replace ntp.conf
   template:
@@ -131,6 +131,7 @@
     dest: /etc/ntp.conf
   when:
     - inventory_hostname in groups['master0']
+    - ansible_distribution != "Ubuntu"
 
 - name:  start ntp
   service:
@@ -148,19 +149,19 @@
     enabled: yes
   when:
     - inventory_hostname in groups['master0']
-    - ansible_distribution == "Ubuntu"
+    - ansible_distribution != "Ubuntu"
 
-- name:  all k8s crontab ntp
-  cron:
-    name: set ntp
-    minute: "30"
-    job: "/usr/sbin/ntpdate {{ master0ip }} >>/home/ntp2.txt  2>&1"
-  when: inventory_hostname not in groups['master0']
+#- name:  all k8s crontab ntp
+#  cron:
+#    name: set ntp
+#    minute: "30"
+#    job: "/usr/sbin/ntpdate {{ master0ip }} >>/home/ntp2.txt  2>&1"
+#  when: inventory_hostname not in groups['master0']
 
 - name: first sync ntp before ntp self and install k8s
   when:
   - inventory_hostname  in groups['k8s']
-  - ansible_distribution == "CentOS" or ansible_distribution is search("Kylin") or ansible_distribution == "openEuler"
+#  - ansible_distribution == "CentOS" or ansible_distribution is search("Kylin") or ansible_distribution == "openEuler"
   command: "/usr/sbin/ntpdate -u {{ntpip}}"
 
 - name:  master0 crontab ntp
@@ -169,6 +170,6 @@
     minute: "30"
     job: "/usr/sbin/ntpdate -u {{ ntpip }} >>/home/ntp1.txt 2>&1"
   when:
-  - inventory_hostname in groups['master0']
+  - inventory_hostname in groups['k8s']
   - not enable_local_ntp_server | bool
 

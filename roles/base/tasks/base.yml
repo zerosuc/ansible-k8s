@@ -161,47 +161,47 @@
     - {"dest":"/etc/security/limits.conf","limit_type": "hard", "limit_item":"nproc", "value": 131072}
     - {"dest":"/etc/security/limits.conf","limit_type": "soft", "limit_item":"nproc", "value": 131072}
 
-# - name: cp ssh sh file
-#   copy: "src=ssh.sh dest={{work_home}}/ssh.sh"
-#   when: inventory_hostname  in groups['master0']
-
-# - name: set ssh.sh file
-#   file:
-#     path: "{{work_home}}/ssh.sh"
-#     mode: 0755
-#   when: inventory_hostname  in groups['master0']
-
-# ## add ssh pub key  mkdir -p .ssh
-# - name:  execute ssh pub key
-#   command: "{{work_home}}/ssh.sh"
-#   when: inventory_hostname  in groups['master0']
-
-# - name: install ssh key
-#   when: inventory_hostname  in groups['k8s']
-#   authorized_key:
-#     user: root
-#     key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
-#     state: present
-
-- name: check file id_rsa.pub exist or not
-  stat: path=/root/.ssh/id_rsa.pub
-  register: pubkey
+- name: cp ssh sh file
+  copy: "src=ssh.sh dest={{work_home}}/ssh.sh"
   when: inventory_hostname  in groups['master0']
 
-- name: generate ssh_copy key
-  shell: ssh-keygen -t rsa -b 4096 -N '' -f ~/.ssh/id_rsa -q
-  when: pubkey.stat.exists == False and inventory_hostname  in groups['master0']
+- name: set ssh.sh file
+  file:
+    path: "{{work_home}}/ssh.sh"
+    mode: 0755
+  when: inventory_hostname  in groups['master0']
 
-- name: copy rsa to local path
-  fetch: src=/root/.ssh/id_rsa.pub dest=/root/
+## add ssh pub key  mkdir -p .ssh
+- name:  execute ssh pub key
+  command: "{{work_home}}/ssh.sh"
   when: inventory_hostname  in groups['master0']
 
 - name: install ssh key
+  when: inventory_hostname  in groups['k8s']
   authorized_key:
     user: root
-    key: "{{ lookup('file', '/root/{{inventory_hostname}}/root/.ssh/id_rsa.pub')}}"
+    key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
     state: present
-  when: inventory_hostname in groups['master0']
+
+#- name: check file id_rsa.pub exist or not
+#  stat: path=/root/.ssh/id_rsa.pub
+#  register: pubkey
+#  when: inventory_hostname  in groups['master0']
+#
+#- name: generate ssh_copy key
+#  shell: ssh-keygen -t rsa -b 4096 -N '' -f ~/.ssh/id_rsa -q
+#  when: pubkey.stat.exists == False and inventory_hostname  in groups['master0']
+#
+#- name: copy rsa to local path
+#  fetch: src=/root/.ssh/id_rsa.pub dest=/root/
+#  when: inventory_hostname  in groups['master0']
+#
+#- name: install ssh key
+#  authorized_key:
+#    user: root
+#    key: "{{ lookup('file', '/root/{{inventory_hostname}}/root/.ssh/id_rsa.pub')}}"
+#    state: present
+#  when: inventory_hostname in groups['master0']
 
 ## 3. install nfs pkg
 - name: nfs dir
@@ -247,23 +247,45 @@
     - ansible_distribution is search("Kylin") or ansible_distribution == "openEuler"
   command: "rpm -ivh /tmp/nfs/*.rpm  --force "
 
-- name: Copy  nfs .deb packages to target host
-  unarchive:
-    src: "nfs-server.deb.{{ansible_architecture}}.tar.gz"
-    dest: "{{work_home}}"
-    mode: 0755
+#- name: Copy  nfs .deb packages to target host
+#  unarchive:
+#    src: "nfs-server.deb.{{ansible_architecture}}.tar.gz"
+#    dest: "{{work_home}}"
+#    mode: 0755
+#  when:
+#    - inventory_hostname  in groups['k8s']
+#    - ansible_distribution == "Ubuntu"
+
+#- name: Install nfs deb packages
+#  shell: dpkg -i {{work_home}}/nfs-server/*.deb  # 执行dpkg命令安装deb包
+#  args:
+#    executable: /bin/bash
+#  register: apt_output
+#  ignore_errors: true # 可以暂时忽略
+#  when:
+#    - inventory_hostname  in groups['k8s']
+#    - ansible_distribution == "Ubuntu"
+
+- name: Install NFS server and client packages
+  apt:
+    name:
+      - nfs-kernel-server   # 安装 NFS 服务端
+      - nfs-common          # 安装 NFS 客户端
+      - ntpdate
+    state: present
+  register: apt_output
+  ignore_errors: true
   when:
-    - inventory_hostname  in groups['k8s']
+    - inventory_hostname in groups['k8s']
     - ansible_distribution == "Ubuntu"
 
-- name: Install nfs deb packages
-  shell: dpkg -i {{work_home}}/nfs-server/*.deb  # 执行dpkg命令安装deb包
-  args:
-    executable: /bin/bash
-  register: apt_output
-  ignore_errors: true # 可以暂时忽略
+- name: Ensure NFS server is running
+  service:
+    name: nfs-kernel-server
+    state: started
+    enabled: true
   when:
-    - inventory_hostname  in groups['k8s']
+    - inventory_hostname in groups['k8s']
     - ansible_distribution == "Ubuntu"
 
 - name: Display nfs apt output

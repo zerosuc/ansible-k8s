@@ -20,13 +20,13 @@
   roles:
     - base
 
-- hosts: k8s
-  any_errors_fatal: true
-  remote_user: root
-  roles:
-    - k8s
-  tags:
-    - k8s
+#- hosts: k8s
+#  any_errors_fatal: true
+#  remote_user: root
+#  roles:
+#    - k8s
+#  tags:
+#    - k8s
 
 #- hosts: master0
 #  any_errors_fatal: true
@@ -36,13 +36,13 @@
 #  tags:
 #    - harbor
 
-- hosts: k8s
-  any_errors_fatal: true
-  remote_user: root
-  roles:
-    - app
-  tags:
-    - app
+#- hosts: k8s
+#  any_errors_fatal: true
+#  remote_user: root
+#  roles:
+#    - app
+#  tags:
+#    - app
 
 #- hosts: master0
 #  any_errors_fatal: true
