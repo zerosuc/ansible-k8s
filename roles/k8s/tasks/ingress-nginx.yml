@@ -1,0 +1,33 @@
+
+- name: label ingerss node
+  command: "kubectl label node  {{hostvars[item]['hostname']}}  ingress=true  --overwrite"
+  with_items: "{{ groups['ingressnode'] }}"
+  when: inventory_hostname in groups['master0']
+
+- name: cp ingress.yaml
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "ingress-nginx.yaml.j2"
+    dest: "/home/ingress-nginx.yaml"
+
+###8.  apply  ingress
+- name: apply ingress
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/ingress-nginx.yaml"
+
+- name: wait 1 min for some depends on pod is ok
+  pause:
+    minutes: 1
+
+## 15. test ingress
+- name: cp test-ing.yaml
+  when:
+    - inventory_hostname in groups['master0']
+  template:
+    src: "test-ing.yaml.j2"
+    dest: "/home/test-ing.yaml"
+
+##8.  apply  ingress
+- name: apply test-ingress.yaml
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/test-ing.yaml"

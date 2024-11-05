@@ -1,0 +1,10 @@
+- name: template storage class
+  when: inventory_hostname in groups['master0']
+  template:
+    src: "local-sc.yaml.j2"
+    dest: "/home/local-sc.yaml"
+
+##8.  apply  local sc
+- name: apply local sc
+  when: inventory_hostname in groups['master0']
+  command: "kubectl apply -f /home/local-sc.yaml"
